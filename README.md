@@ -1,5 +1,4 @@
-# Project Title
-
+# CCA-Secure Proxy Re-Encryption without Pairings∗
 
 
 One Paragraph of project description goes here
