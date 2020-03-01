@@ -6,7 +6,7 @@ usato in molte applicazioni come le email cifrate. In questo progetto rappresent
 schema si propone come uno schema sicuro in senso CCA e resistente alle collisioni  sul modello *random oracle* supposto che il problema decisionale 
 Diffie-Hellman (DDH) in Z<sup>*</sup>(~N^2) e This is some <sup>superscript</sup> text.
 
-Bitbucket server does not support any of either <sub>subscript</sub> or <sup>superscript</sup> or <small>small</small>... :-/
+\zeta(s) = \sum_{n=1}^\infty \frac{1}{n^s}
 
 à
 
