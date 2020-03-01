@@ -4,9 +4,8 @@ In uno schema proxy re-encryption, un proxy di "terze parti" di "fiducia" può t
 ciphertext che Bob può decifrare. Si osservi che il proxy non ha accesso al plaintext. Grazie a questa proprietà, lo schema proxy re-encryption può essere
 usato in molte applicazioni come le email cifrate. In questo progetto rappresenta l'applicazione delloschema proxy re-encryption senza pairings, usando la conversione Fijasaki-Okamoto e la "signature of knowledge", inoltre il proxy può solamente trasformare il ciphertext in modalità *one direction*. Questo
 schema si propone come uno schema sicuro in senso CCA e resistente alle collisioni  sul modello *random oracle* supposto che il problema decisionale 
-Diffie-Hellman (DDH) in Z<sup>*</sup>(~N^2) e This is some <sup>superscript</sup> text.
+Diffie-Hellman (DDH) in ![Scheme]math-formula/render.cgi.png) e This is some <sup>superscript</sup> text.
 
-\zeta(s) = \sum_{n=1}^\infty \frac{1}{n^s}
 
 à
 
