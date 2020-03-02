@@ -7,6 +7,8 @@ schema si propone come uno schema sicuro in senso CCA e resistente alle collisio
 Diffie-Hellman (DDH) in
 ![alt text](math-formula/render.cgi.png)
 
+<img src="math-formula/render.cgi.png">
+
 à
 
 ## Getting Started
