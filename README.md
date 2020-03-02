@@ -1,34 +1,21 @@
-# CCA-Secure Proxy Re-Encryption without Pairings∗
+# CCA-Secure Proxy Re-Encryption without Pairings∗ 
+à
 
 In uno schema proxy re-encryption, un proxy di "terze parti" di "fiducia" può trasformare un ciphertext firmato dalla chiava pubblica, pb, di Alice in un altro
 ciphertext che Bob può decifrare. Si osservi che il proxy non ha accesso al plaintext. Grazie a questa proprietà, lo schema proxy re-encryption può essere
 usato in molte applicazioni come le email cifrate. In questo progetto rappresenta l'applicazione delloschema proxy re-encryption senza pairings, usando la conversione Fijasaki-Okamoto e la "signature of knowledge", inoltre il proxy può solamente trasformare il ciphertext in modalità *one direction*. Questo
-schema si propone come uno schema sicuro in senso CCA e resistente alle collisioni  sul modello *random oracle* supposto che il problema decisionale Diffie-Hellman (DDH) in ![Alt text](math-formula/render.cgi.png) .
-
-
-
-
-à
+schema si propone come uno schema sicuro in senso CCA e resistente alle collisioni  sul modello *random oracle* supposto che il problema decisionale Diffie-Hellman (DDH) in ![Alt text](math-formula/render.cgi.png) sia difficile e sia computazionalmente difficile anche il problema della fattorizzazione. Quindi questo schema di presenta, fino ad ora, il primo schema PRE unidirezionale sicuro in senso CCA e resistente alle collisioni.
 
 ## Getting Started
-
-
-
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
 
 
 
 ### Prerequisites
-
-
-
-What things you need to install the software and how to install them
-
-
+ pachetti da installare per utilizzare il progetto
 
 ```
-
-Give examples
+The GNU Multiple Precision Arithmetic library (https://gmplib.org/)
 
 ```
 
