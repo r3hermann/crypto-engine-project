@@ -15,7 +15,7 @@ These instructions will get you a copy of the project up and running on your loc
  pachetti da installare per utilizzare il progetto
  
 ```
-[The GNU Multiple Precision Arithmetic library](https://gmplib.org/)
+[ The GNU Multiple Precision Arithmetic library ](https://gmplib.org/)
 [Nettle: a low-level cryptographic library](https://www.lysator.liu.se/~nisse/nettle/)
 [PBC Library: the Pairing-Based Cryptography library](https://crypto.stanford.edu/pbc/)
  
