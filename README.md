@@ -5,7 +5,7 @@ ciphertext che Bob può decifrare. Si osservi che il proxy non ha accesso al pla
 usato in molte applicazioni come le email cifrate. In questo progetto rappresenta l'applicazione delloschema proxy re-encryption senza pairings, usando la conversione Fijasaki-Okamoto e la "signature of knowledge", inoltre il proxy può solamente trasformare il ciphertext in modalità *one direction*. Questo
 schema si propone come uno schema sicuro in senso CCA e resistente alle collisioni  sul modello *random oracle* supposto che il problema decisionale 
 Diffie-Hellman (DDH) in
-![alt text](math-formula%20/render.cgi.png)
+![alt text](math-formula/%20render.cgi.png)
 
 à
 
