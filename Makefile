@@ -1,5 +1,3 @@
-### regole di compilazione ###
-### nota: non modificare questo file ma le variabili in Makefile.config ###
 
 CONFIG_FILE = Makefile.config
 ADV_CONFIG_FILE = Makefile.config.adv
