@@ -144,7 +144,8 @@ void weak_secret_key_clear(weak_secret_key_t wsk);
 //keyGen
 void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk,msg_t msg, state_t state, const shared_params_t params, gmp_randstate_t prng);
 
-//void encrypt(keys_t keys);
+void encrypt(const shared_params_t params,gmp_randstate_t prng);
+void decript();
 
 //
 //void hashing(struct_ctx, fnc_init,fnc_update, fnc_difest, dgst_size);
