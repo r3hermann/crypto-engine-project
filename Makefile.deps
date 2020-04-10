@@ -1,4 +1,3 @@
-
 lib-main.o: lib-main.c lib-main.h lib-mesg.h lib-timing.h
 lib-mesg.o: lib-mesg.c lib-mesg.h lib-timing.h
 lib-misc.o: lib-misc.c lib-misc.h
