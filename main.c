@@ -14,7 +14,6 @@
 
 #define prng_sec_level 96
 #define default_p_bits 512 //safe-prime piccoli
-#define default_q_bits 512
 
 #define block_size (1 << 20) // 1 MiB
 #define blocks_to_hash 5
@@ -41,7 +40,9 @@ int main (int argc, char* argv[]){
     //shared params
     shared_params_t params;
     
-    keys_t keys;
+    public_key_t pk;
+    private_key_t sk;
+    weak_secret_key_t wsk;
     
     //hashing_t hashfnc;
     
@@ -105,25 +106,25 @@ int main (int argc, char* argv[]){
     
     
     //check sui parametri
-    if(!verify_params(params)){
+    /*if(!verify_params(params)){
         printf("il controllo dei parametri e' fallito\n");
         exit(1);
-    }
-    
+    }*/
+   
     //state
-    state_init(alice_state);
-    state_init(bob_state);
-    state_init(proxy_state);
+    //state_init(alice_state);
+    //state_init(bob_state);
+   // state_init(proxy_state);
     
     //msg
-   // msg_init(a2p_msg);
+    //msg_init(a2p_msg);
 
     
     //alice= a, g^a
     printf("Generazione parametri di Alice\n");
-    generate_keys(keys,a2p_msg,alice_state,params,prng);
+   generate_keys(pk, sk, wsk, a2p_msg,alice_state,params,prng);
     
-    encrypt( keys );
+    //encrypt( keys );
     /*
     //bob= b, g^b
     printf("Generazione parametri di Bob\n");
@@ -141,13 +142,19 @@ int main (int argc, char* argv[]){
         printf("errore: le chiavi calcolate non coincidono\n");
         exit_status=1;
     }
+    */
+    
     
     //clear
-    msg_clear(a2b_msg);
-    msg_clear(b2a_msg);
-    state_clear(alice_state);
-    state_clear(bob_state);*/
-    keys_clear(keys);
+    //msg_clear(a2b_msg);
+    //msg_clear(b2a_msg);
+    //state_clear(alice_state);
+    //state_clear(bob_state);
+    
+    
+    public_key_clear(pk);
+    private_key_clear(sk);
+    weak_secret_key_clear(wsk);
     shared_params_clear(params);
     gmp_randclear(prng);
     exit(exit_status);
