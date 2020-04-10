@@ -3,6 +3,10 @@
 #include <sys/types.h>
 #include<sys/wait.h>
 #include <nettle/sha1.h>
+#include <time.h> 
+
+#define blocks_to_hash 5
+#define block_size (1 << 20) // 1 MiB
 
 /*
  * get seed
@@ -32,118 +36,96 @@ long random_seed () {
 /* 
  * get shared params
  */
-void generate_shared_params(shared_params_t params, unsigned p_bits, gmp_randstate_t prng) {
-    
-    int fparent=1, fchild=1;
-    int fparent1=1,fchild1=1;
+void generate_shared_params(shared_params_t params, unsigned n_bits, gmp_randstate_t prng) {
 
-    mpz_t tmp;
     pmesg(msg_verbose, "generazione parametri comuni...");
       
     //assert
     assert(params);
-    assert(p_bits>1);
+    assert(n_bits>1);
     assert(prng);
-    
-    //init
-    mpz_init(tmp);
-    mpz_inits(params->p,params->p_1,params->q, params->q_1,params->N,NULL);
 
-    //
-    params->N_bits=p_bits*p_bits;
-    params->p_bits=p_bits;
-    params->q_bits=p_bits;
+    mpz_inits(params->N,params->p,params->p_1,params->q, params->q_1,NULL);
+
+    //scelta delle taglie di p e q
+    params->p_bits=n_bits;
+    params->q_bits=n_bits;
+    params->p_1_bits=n_bits-1; // p' da 511 bit 
+    params->q_1_bits=n_bits-1; // q' da 511 bit
     
-    params->p_1_bits=p_bits-1; // p' da 511 bit 
-    params->q_1_bits=p_bits-1; // q' da 511 bit 
+    //scelta della taglia di p e q con un N fissato (secondo modo)
+    //params->p_bits = n_bits >> 1;
+    //params->q_bits = n_bits - params->p_bits;
 
 
     //p della forma 2*p'+1 con p' e p primi
     //q della forma 2*q'+1 con q' e q primi
+    
+    //possibile ottimizzazione
     do {
         do {
             
-            if ( fparent) {
-                
-                //cerco un primo p' random range 0-2^(p_1_bits)-1
-                mpz_urandomb(params->p_1,prng,params->p_1_bits);
-                if(mpz_sizeinbase(params->p_1, 2) == params->p_1_bits){
-                    if ((mpz_probab_prime_p(params->p_1, mr_iterations)>=1)){
-                       // pmesg_mpz(msg_very_verbose, "CONDIZIONE IF su p' ", params->p_1);
-                        fchild=0;
-                        fparent=0;
-                    }
-                }
-            }//else {printf(" controlli falliti = %d, fparent= %d\n",count++,fparent);}
-            
-            if ( fparent1) {
-                //cerco un primo q'
-                mpz_urandomb(params->q_1,prng,params->q_1_bits);
-                if ( (mpz_sizeinbase(params->q_1, 2)==params->q_1_bits)) {
-                    if( mpz_probab_prime_p(params->q_1, mr_iterations)>=1) {
-                        //pmesg_mpz(msg_very_verbose, "CONDIZIONE IF su Q' ", params->q_1);
-                        fchild1=0;
-                        fparent1=0;
-                    }
-                }
-           }
+            //cerco un primo p' random range 0-2^(p_1_bits)-1
+            mpz_urandomb(params->p_1, prng, params->p_1_bits);
+        }while((mpz_sizeinbase(params->p_1, 2) < params->p_1_bits) ||
+                    (!mpz_probab_prime_p(params->p_1, mr_iterations)));
         
-        }while(fchild || fchild1);
-       // printf("fchild= %d, fchild1= %d\n",fchild,fchild1);
-
-        if( !fchild ) {
- 
-            //calcolo p=2*p'+1
-            mpz_mul_ui(params->p,params->p_1,2);
-            mpz_add_ui(params->p,params->p,1);
-            
-            //0=not prime def
-            if( !mpz_probab_prime_p(params->p,mr_iterations) ) {
-                fparent=1;
-                fchild=1;
-            }
-        }
-         
-         if (!fchild1) {
-             
-             //calcolo q=2*q'+1
-            mpz_mul_ui(params->q,params->q_1,2);
-            mpz_add_ui(params->q,params->q,1);
-            
-            if(!mpz_probab_prime_p(params->q,mr_iterations)) {
-                fparent1=1;
-                fchild1=1;
-            }
-         }
-         
-        } while ( fchild || fchild1 );
-        //gmp_printf("modulo params->p: %Zd\n", params->p);
+        //calcolo p=2*p'+1
+        mpz_mul_ui(params->p,params->p_1,2);
+        mpz_add_ui(params->p,params->p,1);
+        }while(!mpz_probab_prime_p(params->p,mr_iterations));
     
+    do {
+        do{
+            //cerco un primo q'
+            mpz_urandomb(params->q_1,prng,params->q_1_bits);
+        }while((mpz_sizeinbase(params->q_1, 2)<params->q_1_bits) || 
+                    ( !mpz_probab_prime_p(params->q_1, mr_iterations)));
+        
+        //calcolo q=2*q'+1
+        mpz_mul_ui(params->q,params->q_1,2);
+        mpz_add_ui(params->q,params->q,1);
+    }while ( !mpz_probab_prime_p(params->q,mr_iterations) );
+
+
     /* scelta del generatore in Z*: per ogni k,divisore, di ogni elemento
      * di phi_p, la divisione deve essere diverso da 1. In questo caso phi_p=2*q.
      * Occorre verificare g^2!=1 && g^q!=1. Qui
      * e' richiesto che g sia solo conforme alla definizione di generatore
      */
     
-    mpz_mul(params->N,params->q,params->q);
-    //mpz_set_ui(params->g,1);//set g=1
-   
+    //N=p*q
+    mpz_mul(params->N,params->p,params->q);
+
+
+    /*printf("taglia N= %ld, taglia q= %ld, taglia q= %ld\n\n",mpz_sizeinbase(params->N,2),
+        mpz_sizeinbase(params->q,2),mpz_sizeinbase(params->q,2));*/
+    
+    //test divisione
+    /*mpz_cdiv_q(tmp,params->N,params->p);
+    pmesg_mpz(msg_very_verbose, "N/p =",tmp);
+    mpz_cdiv_q(tmp2,params->N,params->q);
+    pmesg_mpz(msg_very_verbose, "mN/q =",tmp2);*/
+    
+    //N varia tra 1023-1024
     pmesg_mpz(msg_very_verbose, "modulo p =",params->p);
     pmesg_mpz(msg_very_verbose, "modulo q =",params->q);
+    
     pmesg_mpz(msg_very_verbose, "modulo p*q =",params->N);
     
     pmesg_mpz(msg_very_verbose, "primo divisore p' dell'ordine", params->p_1);
     pmesg_mpz(msg_very_verbose, "primo divisore p' dell'ordine", params->q_1);
 
-    mpz_clear(tmp);
 }
+
+
 
 /*
  * init: state, msg
  */
 void state_init(state_t state){
     assert(state);
-    state->progression=progression_ready_to_start;
+    //state->progression=progression_ready_to_start;
     mpz_inits(state->eph_exp, state->key,NULL);
 }
 
@@ -155,40 +137,41 @@ void msg_init(msg_t msg) {
 /*
  * contrib KeyGen
  */
-void generate_keys(keys_t keys, msg_t msg, state_t state, const shared_params_t params, gmp_randstate_t prng){
+void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg_t msg,
+                   state_t state, const shared_params_t params, gmp_randstate_t prng){
     
     assert(msg);
     assert(state);
     //assert(state->progression>=progression_ready_to_start);
     assert(params);
     assert(prng);
+    
+    time_t seconds=(unsigned long long)time(NULL); //secondi dal 1 gennaio 1970
+    
     pmesg(msg_verbose, "generazione del contributo...");
     
-    mpz_t N_2, alpha,a,b,tmp;
-
-    struct sha1_ctx ctx;//sha-1
-    uint8_t digest[SHA1_DIGEST_SIZE*8]; 
-    char buffer[2048]; 
-    sha1_init(&ctx);
+    mpz_t N_2, alpha,tmp;
+    mpz_inits(N_2, alpha, tmp, NULL);
     
+    //init keys
+    mpz_inits(pk->id,pk->N, pk->g0, pk->g1, pk->g2, NULL);
+    mpz_inits(sk->p,sk->q, sk->p_1, sk->q_1, NULL);    
+    mpz_inits(wsk->a, wsk->b, NULL);
     
-    mpz_inits(N_2, alpha,a,b, tmp, NULL);
-    mpz_inits(keys->N, keys->g0, keys->g1, keys->g2, keys->p,keys->q,
-                    keys->p_1, keys->q_1, NULL);
-    
-    sha1_init(&ctx);
     
     //keys->N
-    mpz_set(keys->N,params->N);
+    mpz_set(pk->N,params->N);
     
+    mpz_set_ui(pk->id,seconds);
+        
     //set sk keys
-    mpz_set(keys->p,params->p);
-    mpz_set(keys->p_1,params->p_1);
-    mpz_set(keys->q,params->q);
-    mpz_set(keys->q_1,params->q_1);
+    mpz_set(sk->p,params->p);
+    mpz_set(sk->p_1,params->p_1);
+    mpz_set(sk->q,params->q);
+    mpz_set(sk->q_1,params->q_1);
     
-    //set hash ?
-    
+    //set id hash
+    mpz_set_ui(pk->id,seconds);
     
     //apha random
     mpz_pow_ui(N_2,params->N,2);
@@ -202,56 +185,68 @@ void generate_keys(keys_t keys, msg_t msg, state_t state, const shared_params_t 
     
     //a,b random in [1,pp' qq'], 0 escluso
     do {
-        mpz_urandomm(a,prng,tmp);
-        mpz_urandomm(b,prng,tmp);
-    } while( (mpz_cmp_ui(a,0)==0) || (mpz_cmp_ui(a,0)==0)  );
+        mpz_urandomm(wsk->a,prng,tmp);
+        mpz_urandomm(wsk->b,prng,tmp);
+    } while( (mpz_cmp_ui(wsk->a,0)==0) || (mpz_cmp_ui(wsk->b,0)==0)  );
     
-    /*test generatori?*/
+    //test generatori?
     
     //g0 = alpha^2 mod N^2
-    mpz_powm_ui(keys->g0,alpha,2,N_2);
+    mpz_powm_ui(pk->g0,alpha,2,N_2);
     
     //g1 = g0^a mod N^2
-    mpz_powm(keys->g1,keys->g0,a,N_2);
+    mpz_powm(pk->g1,pk->g0,wsk->a,N_2);
     
     //g2= g0^b mod N^2
-    mpz_powm(keys->g2,keys->g0,b,N_2);
+    mpz_powm(pk->g2,pk->g0,wsk->b,N_2);
     
     //pk
     printf("\npk = (H(.), N, g0, g1, g2)\n");
     pmesg_mpz(msg_very_verbose, "alpha =",alpha);
-    pmesg_mpz(msg_very_verbose, "modulo N=",keys->N);
-    pmesg_mpz(msg_very_verbose, "g0 =",keys->g0);
-    pmesg_mpz(msg_very_verbose, "g1 =",keys->g1);
-    pmesg_mpz(msg_very_verbose, "g2=",keys->g2);
+    pmesg_mpz(msg_very_verbose, "id_timestamp =",pk->id);
+    pmesg_mpz(msg_very_verbose, "modulo N=",pk->N);
+    pmesg_mpz(msg_very_verbose, "g0 =",pk->g0);
+    pmesg_mpz(msg_very_verbose, "g1 =",pk->g1);
+    pmesg_mpz(msg_very_verbose, "g2=",pk->g2);
 
     //weak secret
     printf("\nweak secret\n");
-    pmesg_mpz(msg_very_verbose, "a =",a);
-    pmesg_mpz(msg_very_verbose, "b =",b);
+    pmesg_mpz(msg_very_verbose, "a =",wsk->a);
+    pmesg_mpz(msg_very_verbose, "b =",wsk->b);
     
     //sk
     printf("\nsk = (p, q, p', q')\n");
-    pmesg_mpz(msg_very_verbose, "p =",keys->p);
-    pmesg_mpz(msg_very_verbose, "q =",keys->q);
-    pmesg_mpz(msg_very_verbose, "p' = ", keys->p_1);
-    pmesg_mpz(msg_very_verbose, "q' = ", keys->q_1);
+    pmesg_mpz(msg_very_verbose, "p =",sk->p);
+    pmesg_mpz(msg_very_verbose, "q =",sk->q);
+    pmesg_mpz(msg_very_verbose, "p' = ", sk->p_1);
+    pmesg_mpz(msg_very_verbose, "q' = ", sk->q_1);
     
-    mpz_clears(N_2, alpha,a,b, tmp, NULL);
+    mpz_clears(N_2, alpha, tmp,NULL);
 
 }
-
 /*
  * encrypt
- */
+ *//*
 void encrypt( keys_t keys) {
     
     uint8_t block_to_hash[block_size]; //block_size=1MiB = 1024 KB
+    uint8_t digest[SHA1_DIGEST_SIZE*8];
+    char buffer[2048]; 
     
+    //test
     for (size_t i = 0; i < block_size; i++)
         block_to_hash[i] = (uint8_t)rand();
+    
+    for(int i =0;i<blocks_to_hash;i++)
+        sha1_update(&keys->ctx, block_size,block_to_hash);
+        
+    sha1_digest(&keys->ctx,SHA1_DIGEST_SIZE,digest);
+    
+    //hashoutout
+    printf("hashing");
+    pmesg_hex(msg_verbose, buffer, SHA1_DIGEST_SIZE, digest); 
 }
-
+*/
 
 /*
  * verifica la correttezza dei parametri
@@ -265,11 +260,13 @@ bool verify_params(const shared_params_t params) {
     assert(params);
 
     mpz_init(tmp);
-    //printf("verifica\n\n");
+    //printf("\nverifica sui parametri in corso\n\n");
+    //printf("\nverifica su %d\n\n",params->N_bits);
     
     //check su N
     if (params->N_bits < 1024) {
         printf("false");
+        
         return_value = false;
         
     }else if ((params->p_1_bits >= params->p_bits) || (params->q_1_bits >= params->p_bits)){
@@ -281,17 +278,28 @@ bool verify_params(const shared_params_t params) {
 }
 
 /*
- * clear: shared_params,msg_clear,state_clear
+ * clear
  */
-void shared_params_clear(shared_params_t params) {
-    assert(params);
-    mpz_clears(params->p,params->q,NULL);
+
+
+void public_key_clear(public_key_t pk) {
+    assert(pk);
+    mpz_clears(pk->id, pk->N, pk->g0, pk->g1, pk->g2, NULL);
 }
 
-void keys_clear(keys_t keys) {
-    assert(keys);
-    mpz_clears(keys->N, keys->g0, keys->g1, keys->g2, keys->p,keys->q,
-                    keys->p_1, keys->q_1, NULL);
+void private_key_clear(private_key_t sk) {
+    assert(sk);
+    mpz_clears(sk->p, sk->q, sk->p_1, sk->q_1, NULL);
+}
+
+void weak_secret_key_clear(weak_secret_key_t wsk){
+    assert(wsk);
+    mpz_clears(wsk->a, wsk->b, NULL);
+}
+
+void shared_params_clear(shared_params_t params) {
+    assert(params);
+    mpz_clears(params->N, params->p, params->p_1, params->q, params->q_1, NULL);
 }
     
     /*do {
@@ -319,4 +327,67 @@ void keys_clear(keys_t keys) {
         mpz_powm(tmp, params->g,params->q_1, params->N);
 
     } while((mpz_cmp_ui(tmp,1)==0) );*/
- 
+    
+/****/
+
+//2 modo meno efficiente
+    /*do {
+        do {
+            if ( fparent) {
+                
+                //cerco un primo p' random range 0-2^(p_1_bits)-1
+                mpz_urandomb(params->p_1,prng,params->p_1_bits);
+                if(mpz_sizeinbase(params->p_1, 2) == params->p_1_bits){
+                    if ((mpz_probab_prime_p(params->p_1, mr_iterations)>=1)){
+                        //pmesg_mpz(msg_very_verbose, "CONDIZIONE IF su p' ", params->p_1);
+                        fchild=0;
+                        fparent=0;
+
+                    }
+                }
+            }
+            if ( fparent1) {
+                //cerco un primo q'
+                mpz_urandomb(params->q_1,prng,params->q_1_bits);
+                if ( (mpz_sizeinbase(params->q_1, 2)==params->q_1_bits)) {
+                    if( mpz_probab_prime_p(params->q_1, mr_iterations)>=1) {
+                        //pmesg_mpz(msg_very_verbose, "CONDIZIONE IF su Q' ", params->q_1);
+                        fchild1=0;
+                        fparent1=0;
+
+                    }
+                }
+           }
+           countv2++;
+        }while(fchild || fchild1);
+        //printf("fchild %d . fchild1 %d\n",fchild,fchild1);
+        //pmesg_mpz(msg_very_verbose, "safeprime PP' ", params->p_1);
+        //pmesg_mpz(msg_very_verbose, "safeprime Q' ", params->q_1);
+        //printf("\n\n");
+        
+        if( !fchild ) {
+
+            //calcolo p=2*p'+1
+            mpz_mul_ui(params->p,params->p_1,2);
+            mpz_add_ui(params->p,params->p,1);
+            
+            //0=not prime def
+            if( !mpz_probab_prime_p(params->p,mr_iterations) ) {
+                fparent=1;
+                fchild=1;
+            }
+        } 
+         if (!fchild1) {
+             
+             //calcolo q=2*q'+1
+            mpz_mul_ui(params->q,params->q_1,2);
+            mpz_add_ui(params->q,params->q,1);
+            if(!mpz_probab_prime_p(params->q,mr_iterations)) {
+                fparent1=1;
+                fchild1=1;
+            }
+         }
+         countv2++;
+         //mcountv2+=countv2;
+        } while ( fchild || fchild1 );
+        printf("countv2= %d\n\n",countv2);*/
