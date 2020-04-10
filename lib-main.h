@@ -9,7 +9,7 @@
 #include <strings.h>
 #include <nettle/sha1.h>
 
-#define mr_iterations 12
+#define mr_iterations 15
 #define BYTEREAD sizeof(char)*4
 
 #define hashing(struct_ctx, fnc_init,fnc_update, fnc_difest, dgst_size)
@@ -27,29 +27,44 @@ typedef enum {
 typedef enum { public_key_type, secret_key_type } key_type_t;
 
 /*
- * keys
+ * public key
  */
-struct keys_struct {
-  
-    //tipo chiave
-    key_type_t type;
-    unsigned int n_bits;
+struct public_key_struct {
     
     /*elementi pubblici*/
-    struct sha1_ctx ctx;
+    mpz_t id;
     mpz_t N;
     mpz_t g0;
     mpz_t g1;
     mpz_t g2;
-    
+
+};
+typedef struct public_key_struct public_key_t[1];
+
+/*
+ * private key 
+ */
+struct private_key_struct {
+
     /*elementi privati*/
     mpz_t p;
     mpz_t p_1;
     mpz_t q;
     mpz_t q_1;
 };
-typedef struct keys_struct *keys_ptr;
-typedef struct keys_struct keys_t[1];
+typedef struct private_key_struct private_key_t[1];
+
+/*
+ * weak secret key
+ */
+struct weak_secret_key_struct {
+
+    /*elementi privati*/
+    mpz_t a;
+    mpz_t b;
+    
+};
+typedef struct weak_secret_key_struct weak_secret_key_t[1];
 
 /*
  * parametri condivisi
@@ -67,10 +82,10 @@ struct shared_params_struct {
     mpz_t N;
     
     mpz_t p;
-    mpz_t p_1;//q
+    mpz_t p_1;//p'
     
     mpz_t q;
-    mpz_t q_1;//q
+    mpz_t q_1;//q'
 
 };
 
@@ -122,13 +137,14 @@ void msg_init(msg_t msg);
 void shared_params_clear(shared_params_t params);
 void msg_clear(msg_t msg);
 void state_clear(state_t state);
-void keys_clear(keys_t keys);
+void public_key_clear(public_key_t pk);
+void private_key_clear(private_key_t sk);
+void weak_secret_key_clear(weak_secret_key_t wsk);
 
 //keyGen
-void generate_keys(keys_t keys, msg_t msg, state_t state, const shared_params_t params, gmp_randstate_t prng);
+void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk,msg_t msg, state_t state, const shared_params_t params, gmp_randstate_t prng);
 
-//
-void encrypt(keys_t keys);
+//void encrypt(keys_t keys);
 
 //
 //void hashing(struct_ctx, fnc_init,fnc_update, fnc_difest, dgst_size);
