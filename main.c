@@ -106,10 +106,10 @@ int main (int argc, char* argv[]){
     
     
     //check sui parametri
-    /*if(!verify_params(params)){
+    if(!verify_params(params)){
         printf("il controllo dei parametri e' fallito\n");
         exit(1);
-    }*/
+    }
    
     //state
     //state_init(alice_state);
@@ -124,7 +124,7 @@ int main (int argc, char* argv[]){
     printf("Generazione parametri di Alice\n");
    generate_keys(pk, sk, wsk, a2p_msg,alice_state,params,prng);
     
-    //encrypt( keys );
+    encrypt(params,prng );
     /*
     //bob= b, g^b
     printf("Generazione parametri di Bob\n");
