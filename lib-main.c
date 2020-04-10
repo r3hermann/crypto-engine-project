@@ -96,10 +96,6 @@ void generate_shared_params(shared_params_t params, unsigned n_bits, gmp_randsta
     
     //N=p*q
     mpz_mul(params->N,params->p,params->q);
-
-
-    /*printf("taglia N= %ld, taglia q= %ld, taglia q= %ld\n\n",mpz_sizeinbase(params->N,2),
-        mpz_sizeinbase(params->q,2),mpz_sizeinbase(params->q,2));*/
     
     //test divisione
     /*mpz_cdiv_q(tmp,params->N,params->p);
@@ -115,9 +111,7 @@ void generate_shared_params(shared_params_t params, unsigned n_bits, gmp_randsta
     
     pmesg_mpz(msg_very_verbose, "primo divisore p' dell'ordine", params->p_1);
     pmesg_mpz(msg_very_verbose, "primo divisore p' dell'ordine", params->q_1);
-
 }
-
 
 
 /*
@@ -146,7 +140,7 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
     assert(params);
     assert(prng);
     
-    time_t seconds=(unsigned long long)time(NULL); //secondi dal 1 gennaio 1970
+    time_t seconds=time(NULL); //secondi dal 1 gennaio 1970
     
     pmesg(msg_verbose, "generazione del contributo...");
     
@@ -158,10 +152,8 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
     mpz_inits(sk->p,sk->q, sk->p_1, sk->q_1, NULL);    
     mpz_inits(wsk->a, wsk->b, NULL);
     
-    
-    //keys->N
+    //set N e id(H(.))
     mpz_set(pk->N,params->N);
-    
     mpz_set_ui(pk->id,seconds);
         
     //set sk keys
@@ -222,31 +214,37 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
     pmesg_mpz(msg_very_verbose, "q' = ", sk->q_1);
     
     mpz_clears(N_2, alpha, tmp,NULL);
-
 }
+
+
 /*
  * encrypt
- *//*
-void encrypt( keys_t keys) {
+ */
+void encrypt(const shared_params_t params,gmp_randstate_t prng) {
     
+    mpz_t sigma;
+    assert(prng);
+    /*
     uint8_t block_to_hash[block_size]; //block_size=1MiB = 1024 KB
     uint8_t digest[SHA1_DIGEST_SIZE*8];
-    char buffer[2048]; 
+    char buffer[2048];*/ 
     
-    //test
-    for (size_t i = 0; i < block_size; i++)
-        block_to_hash[i] = (uint8_t)rand();
+    pmesg(msg_verbose, "cifratura...");
     
-    for(int i =0;i<blocks_to_hash;i++)
-        sha1_update(&keys->ctx, block_size,block_to_hash);
-        
-    sha1_digest(&keys->ctx,SHA1_DIGEST_SIZE,digest);
+    mpz_urandomm(sigma,prng, params->N);
+    pmesg_mpz(msg_very_verbose, "sigma =",sigma);
     
-    //hashoutout
-    printf("hashing");
-    pmesg_hex(msg_verbose, buffer, SHA1_DIGEST_SIZE, digest); 
+
+    mpz_clears(sigma,NULL);
 }
-*/
+
+
+/*
+ * decrypt
+ */
+void decript() {
+    
+}
 
 /*
  * verifica la correttezza dei parametri
@@ -254,33 +252,18 @@ void encrypt( keys_t keys) {
  */
 bool verify_params(const shared_params_t params) {
     
-    mpz_t tmp;
     bool return_value = true;
-
     assert(params);
-
-    mpz_init(tmp);
-    //printf("\nverifica sui parametri in corso\n\n");
-    //printf("\nverifica su %d\n\n",params->N_bits);
-    
-    //check su N
-    if (params->N_bits < 1024) {
-        printf("false");
-        
+ if ((params->p_1_bits >= params->p_bits) || (params->q_1_bits >= params->q_bits))
         return_value = false;
-        
-    }else if ((params->p_1_bits >= params->p_bits) || (params->q_1_bits >= params->p_bits)){
-        
-        return_value = false;
-    }
     
     return (return_value);
 }
 
+
 /*
  * clear
  */
-
 
 void public_key_clear(public_key_t pk) {
     assert(pk);
