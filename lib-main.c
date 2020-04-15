@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include<sys/wait.h>
+#include <nettle/sha3.h>
 #include <nettle/sha1.h>
 #include <time.h> 
 
@@ -114,19 +115,6 @@ void generate_shared_params(shared_params_t params, unsigned n_bits, gmp_randsta
 }
 
 
-/*
- * init: state, msg
- */
-void state_init(state_t state){
-    assert(state);
-    //state->progression=progression_ready_to_start;
-    mpz_inits(state->eph_exp, state->key,NULL);
-}
-
-void msg_init(msg_t msg) {
-    assert(msg);
-    mpz_init(msg->contrib);
-}
 
 /*
  * contrib KeyGen
@@ -220,22 +208,88 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
 /*
  * encrypt
  */
-void encrypt(const shared_params_t params,gmp_randstate_t prng) {
+void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext_t plaintext, const public_key_t pk) {
     
-    mpz_t sigma;
+    mpz_t sigma, tmp0,r;
     assert(prng);
-    /*
-    uint8_t block_to_hash[block_size]; //block_size=1MiB = 1024 KB
-    uint8_t digest[SHA1_DIGEST_SIZE*8];
-    char buffer[2048];*/ 
+    assert(params);
+    assert(plaintext);
     
+    //check plaintext, servono ulteriori controlli?
+    assert(mpz_cmp_ui(plaintext->m, 0L)>0);
+    assert(mpz_cmp(plaintext->m, params->N) < 0);
     pmesg(msg_verbose, "cifratura...");
     
+    mpz_inits(sigma,tmp0,r, NULL);
+    pmesg_mpz(msg_very_verbose, "testo in chiaro", plaintext->m);
+    
+    
+    //sigma in Zn random
     mpz_urandomm(sigma,prng, params->N);
-    pmesg_mpz(msg_very_verbose, "sigma =",sigma);
+    
+    //solo per stampa
+    char bufferp[1000];
+    
+    //mpz_set_ui(tmp0,tmp);
+    
+    
+    //sigma || m || id, (string base 10)
+    char *strsig;
+    char *str_s_m=mpz_get_str(strsig, 10, sigma);
+    strcat(str_s_m, mpz_get_str(strsig, 10, plaintext->m));
+    strcat(str_s_m, mpz_get_str(strsig, 10, pk->id));
+    
+    
+    //length str_s_m
+    char *str_s_m_length=&str_s_m[0];
+    int const s_m_length=strlen(str_s_m_length);
+    //printf("length (str_s_m)= %d\n",(s_m_length));
+    
+    //512 bit output
+    struct sha3_512_ctx ctx512;
+    sha3_512_init (&ctx512);
+    uint8_t digestsha3_512[SHA3_512_DIGEST_SIZE];
+    uint8_t block_to_hashsha3_512[s_m_length];
+    
+    printf("\n(sigma||m||id)= ");
+    for(int i=0; i<(s_m_length);i++){
+        printf("%c",str_s_m[i]);
+        block_to_hashsha3_512[i]=(uint8_t)str_s_m[i];
+    }
+    sha3_512_update(&ctx512, s_m_length, block_to_hashsha3_512);
+    sha3_512_digest(&ctx512, SHA3_512_DIGEST_SIZE, digestsha3_512);
+    
+    
+    
+    //test stampa str_s_m
+    /*printf("\n\n");
+    int len=0;
+    while(str_s_m[len]!='\0') {
+        //printf("%c, ",str_s_m[len]);
+        len++;
+    }
+    printf("len= %d\n\n",len);*/
+
+    //test print hash
+    /*printf("\n\nsha3_512_digest: ");
+    for (unsigned i = 0; i<SHA3_512_DIGEST_SIZE; i++)
+          printf("%u",digestsha3_512[i]);
+    printf("\n\n");*/
+    
+    mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0,digestsha3_512);
+    //gmp_printf("check r: %Zd\n", r);
+    
+    printf("\n\n");
     
 
-    mpz_clears(sigma,NULL);
+    pmesg_mpz(msg_very_verbose, "r =",r);
+    pmesg_mpz(msg_very_verbose, "sigma =",sigma);
+    //printf("sigma in string= %s\n",str_s_m);
+    
+    pmesg_hex(msg_verbose, bufferp, SHA3_512_BLOCK_SIZE, digestsha3_512); 
+    
+    //free(tmp);
+    mpz_clears(sigma,tmp0,r,NULL);
 }
 
 
@@ -262,7 +316,27 @@ bool verify_params(const shared_params_t params) {
 
 
 /*
- * clear
+ * init method
+ */
+
+void state_init(state_t state){
+    assert(state);
+    //state->progression=progression_ready_to_start;
+    mpz_inits(state->eph_exp, state->key,NULL);
+}
+
+void msg_init(msg_t msg) {
+    assert(msg);
+    mpz_init(msg->contrib);
+}
+
+void plaintext_init(plaintext_t plaintext) {
+    assert(plaintext);
+    mpz_init(plaintext->m);
+}
+
+/*
+ * clear method
  */
 
 void public_key_clear(public_key_t pk) {
@@ -284,7 +358,11 @@ void shared_params_clear(shared_params_t params) {
     assert(params);
     mpz_clears(params->N, params->p, params->p_1, params->q, params->q_1, NULL);
 }
-    
+
+void plaintext_clear(plaintext_t plaintext) {
+    assert(plaintext);
+    mpz_clear(plaintext->m);
+}
     /*do {
         
         mpz_add_ui(params->g,params->g,1);//g+=1
