@@ -117,6 +117,30 @@ struct msg_struct {
 typedef struct msg_struct *msg_ptr;
 typedef struct msg_struct msg_t[1];
 
+/*
+ * plaintext
+ */
+struct plaintext_struct{
+    mpz_t m;
+};
+typedef struct plaintext_struct *plaintext_ptr;
+typedef struct plaintext_struct plaintext_t[1];
+
+/*
+ * ciphertext
+ */
+struct ciphertext_struct{
+    
+    mpz_t A;
+    mpz_t A_1;
+    mpz_t A_p;
+    mpz_t B;
+    mpz_t B_p;
+    mpz_t C;
+    mpz_t C_p;
+    mpz_t D;
+};
+typedef struct ciphertext_struct ciphertext_t[1];
 
 /*metodi*/
 
@@ -132,6 +156,8 @@ bool compute_key(state_t state, const msg_t other_msg, const shared_params_t par
 //init
 void state_init(state_t state);
 void msg_init(msg_t msg);
+void plaintext_init(plaintext_t plaintext);
+void ciphertext_init(ciphertext_t ciphertext);
 
 //clear
 void shared_params_clear(shared_params_t params);
@@ -140,11 +166,13 @@ void state_clear(state_t state);
 void public_key_clear(public_key_t pk);
 void private_key_clear(private_key_t sk);
 void weak_secret_key_clear(weak_secret_key_t wsk);
+void plaintext_clear(plaintext_t plaintext);
+void ciphertext_clear(ciphertext_t ciphertext);
 
 //keyGen
 void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk,msg_t msg, state_t state, const shared_params_t params, gmp_randstate_t prng);
 
-void encrypt(const shared_params_t params,gmp_randstate_t prng);
+void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext_t msg, const public_key_t pk);
 void decript();
 
 //
