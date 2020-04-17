@@ -43,9 +43,13 @@ int main (int argc, char* argv[]){
     //shared params N
     shared_params_t params;
     
+    //key
     public_key_t pk;
     private_key_t sk;
     weak_secret_key_t wsk;
+    
+    ciphertext_t K;
+    state_t PRE_state;
     
     int exit_status=0;
     
@@ -123,6 +127,9 @@ int main (int argc, char* argv[]){
         printf_et("generate_shared_params: ", time, tu_sec,"\n");
     
     
+    //PRE_state
+    PRE_scheme_state(PRE_state);
+    
     //check sui parametri
     if(!verify_params(params)){
         printf("il controllo dei parametri e' fallito\n");
@@ -139,10 +146,10 @@ int main (int argc, char* argv[]){
 
     
     //alice= a, g^a
-    printf("Generazione parametri di Alice\n");
-    generate_keys(pk, sk, wsk, a2p_msg,alice_state,params,prng);
-    
+    printf("\n\nGenerazione parametri di Alice\n");
+    generate_keys(pk, sk, wsk, a2p_msg,alice_state, params,prng, PRE_state);
     plaintext_init(plaintext_msg);
+    
     if (fixed_msg > 0) {
         mpz_set_ui(plaintext_msg->m,fixed_msg);
     }
@@ -154,11 +161,12 @@ int main (int argc, char* argv[]){
     }
     //gmp_printf("check plaintext->m: %Zd\n", plaintext_msg->m);
     //gmp_printf("check N: %Zd\n", params->N);
-
+    
+    ciphertext_init(K);
    printf("\nCifratura...\n");
    perform_clock_cycles_sampling_period(
        timing, applied_sampling_time, max_samples, tu_millis,{
-           encrypt(params, prng, plaintext_msg,pk);},{});
+           encrypt(params, prng, plaintext_msg,pk, K, PRE_state);},{});
    if (do_bench)
             printf_short_stats(" rsa_encryption", timing, "");
    
@@ -193,6 +201,7 @@ int main (int argc, char* argv[]){
     private_key_clear(sk);
     weak_secret_key_clear(wsk);
     shared_params_clear(params);
+    ciphertext_clear(K);
     plaintext_clear(plaintext_msg);
     gmp_randclear(prng);
     exit(exit_status);
