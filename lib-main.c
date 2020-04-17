@@ -13,6 +13,7 @@
  * get seed
  */
 long random_seed () {
+    
     FILE *dev_random;
     int byte_count;
     int seed=0;
@@ -33,6 +34,22 @@ long random_seed () {
     return seed;
 }
 
+
+/*void state {
+    
+        unsigned int buffer;
+    int byte_count=4;
+    FILE *dev_random;
+	dev_random = fopen("/dev/random", "r");
+    if(dev_random == NULL) {
+		fprintf(stderr, "cannot open random number device!\n");
+		exit(1);
+	}
+    
+	fread(&buffer,sizeof(char), byte_count, dev_random);
+	fclose(dev_random);
+    
+}*/
 
 /* 
  * get shared params
@@ -115,12 +132,34 @@ void generate_shared_params(shared_params_t params, unsigned n_bits, gmp_randsta
 }
 
 
+void PRE_scheme_state (state_t PRE_state) {
+    
+    unsigned int buffer[3];
+    int byte_count=16;
+    FILE *dev_random;
+    dev_random = fopen("/dev/random", "r");
+
+    if(dev_random == NULL) {
+		fprintf(stderr, "cannot open random number device!\n");
+		exit(1);
+	}
+    
+	fread(&buffer,sizeof(char), byte_count, dev_random);
+    
+    PRE_state->h_1=*(&buffer[0]);
+    PRE_state->h_2=*(&buffer[1]);
+    PRE_state->h_3=*(&buffer[2]);
+    
+    for(int i=0;i<3;i++)
+        printf(" buffer[%d] = %u", i, buffer[i]);
+    fclose(dev_random);
+}
 
 /*
  * contrib KeyGen
  */
 void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg_t msg,
-                   state_t state, const shared_params_t params, gmp_randstate_t prng){
+                   state_t state, const shared_params_t params, gmp_randstate_t prng, const state_t PRE_state){
     
     assert(msg);
     assert(state);
@@ -128,7 +167,7 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
     assert(params);
     assert(prng);
     
-    time_t seconds=time(NULL); //secondi dal 1 gennaio 1970
+    //time_t seconds=time(NULL); //secondi dal 1 gennaio 1970
     
     pmesg(msg_verbose, "generazione del contributo...");
     
@@ -136,13 +175,16 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
     mpz_inits(N_2, alpha, tmp, NULL);
     
     //init keys
-    mpz_inits(pk->id,pk->N, pk->g0, pk->g1, pk->g2, NULL);
+    mpz_inits(pk->N, pk->id_hash, pk->g0, pk->g1, pk->g2, NULL);
     mpz_inits(sk->p,sk->q, sk->p_1, sk->q_1, NULL);    
     mpz_inits(wsk->a, wsk->b, NULL);
     
-    //set N e id(H(.))
+    //set N e id_hash
     mpz_set(pk->N,params->N);
-    mpz_set_ui(pk->id,seconds);
+    mpz_set_ui(pk->id_hash, (PRE_state->h_1)); //primo step alice
+    
+    
+
         
     //set sk keys
     mpz_set(sk->p,params->p);
@@ -150,8 +192,6 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
     mpz_set(sk->q,params->q);
     mpz_set(sk->q_1,params->q_1);
     
-    //set id hash
-    mpz_set_ui(pk->id,seconds);
     
     //apha random
     mpz_pow_ui(N_2,params->N,2);
@@ -183,7 +223,7 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
     //pk
     printf("\npk = (H(.), N, g0, g1, g2)\n");
     pmesg_mpz(msg_very_verbose, "alpha =",alpha);
-    pmesg_mpz(msg_very_verbose, "id_timestamp =",pk->id);
+    pmesg_mpz(msg_very_verbose, "id_Hash =",pk->id_hash);
     pmesg_mpz(msg_very_verbose, "modulo N=",pk->N);
     pmesg_mpz(msg_very_verbose, "g0 =",pk->g0);
     pmesg_mpz(msg_very_verbose, "g1 =",pk->g1);
@@ -208,19 +248,21 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
 /*
  * encrypt
  */
-void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext_t plaintext, const public_key_t pk) {
+void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext_t plaintext, const public_key_t pk,
+                    ciphertext_t ciphertext_K, const state_t PRE_state) {
     
-    mpz_t sigma, tmp0,r;
+    mpz_t sigma, tmp, r, N_2;
     assert(prng);
     assert(params);
     assert(plaintext);
+    assert(ciphertext_K);
     
     //check plaintext, servono ulteriori controlli?
     assert(mpz_cmp_ui(plaintext->m, 0L)>0);
     assert(mpz_cmp(plaintext->m, params->N) < 0);
     pmesg(msg_verbose, "cifratura...");
     
-    mpz_inits(sigma,tmp0,r, NULL);
+    mpz_inits(sigma, tmp, r, N_2, NULL);
     pmesg_mpz(msg_very_verbose, "testo in chiaro", plaintext->m);
     
     
@@ -230,15 +272,23 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     //solo per stampa
     char bufferp[1000];
     
-    //mpz_set_ui(tmp0,tmp);
     
+
     
     //sigma || m || id, (string base 10)
-    char *strsig;
+    char *strsig=0;
+    
+    const int n= snprintf(NULL, 0, "%lu", PRE_state->h_1);
+    assert(n>0);
+    char buff[n+1];
+    int c = snprintf(buff, n+1, "%lu",PRE_state->h_1);
+    assert(buff[n]=='\0');
+    assert(c==n);
+    
     char *str_s_m=mpz_get_str(strsig, 10, sigma);
     strcat(str_s_m, mpz_get_str(strsig, 10, plaintext->m));
-    strcat(str_s_m, mpz_get_str(strsig, 10, pk->id));
     
+    strcat(str_s_m,  buff); //H_2 
     
     //length str_s_m
     char *str_s_m_length=&str_s_m[0];
@@ -271,32 +321,65 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     printf("len= %d\n\n",len);*/
 
     //test print hash
-    /*printf("\n\nsha3_512_digest: ");
+    /*printf("\n\nTest on-line sha3_512_digest: ");
     for (unsigned i = 0; i<SHA3_512_DIGEST_SIZE; i++)
-          printf("%u",digestsha3_512[i]);
+          printf("%02x",digestsha3_512[i]);
     printf("\n\n");*/
     
     mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0,digestsha3_512);
     //gmp_printf("check r: %Zd\n", r);
     
+    mpz_pow_ui(N_2,params->N,2);
+    
+    //A=go^r mod N^2
+    mpz_powm(ciphertext_K->A, pk->g0,r,N_2);
+    
+    //C= H_2 (sigma ) xor m
+    
+    
+    //D=g2^r mod N^2
+    mpz_powm(ciphertext_K->D, pk->g2,r,N_2);
+    
+    //B=g1^r * (1+sigma*N) mod N^2  ( a*b mod = mod (a mod * b mod ) )
+    
+    //y=(1+sigma*N) mod N^2
+    mpz_mul(tmp,sigma,pk->N);
+    mpz_add_ui(tmp,tmp,1);
+    mpz_mod(tmp, tmp, N_2);
+    
+    //x=g1^r mod N^2
+    mpz_powm(ciphertext_K->B, pk->g1, r, N_2);
+    
+    //B=x*y mod N^2
+    mpz_mul(ciphertext_K->B, ciphertext_K->B, tmp);
+    mpz_mod(ciphertext_K->B, ciphertext_K->B, N_2);
+    
+    
+    
+    
+    
     printf("\n\n");
     
-
+    printf("output ciphertext. K=(A, B, D, c, s)\n");
     pmesg_mpz(msg_very_verbose, "r =",r);
     pmesg_mpz(msg_very_verbose, "sigma =",sigma);
-    //printf("sigma in string= %s\n",str_s_m);
+    pmesg_mpz(msg_very_verbose, "ciphertext_K->A =",ciphertext_K->A);
+    pmesg_mpz(msg_very_verbose, "ciphertext_K->B =",ciphertext_K->B);
+    pmesg_mpz(msg_very_verbose, "ciphertext_K->C =",ciphertext_K->C);
+    pmesg_mpz(msg_very_verbose, "ciphertext_K->D =",ciphertext_K->D);
+    //pmesg_mpz(msg_very_verbose, "c =",c);
+    //pmesg_mpz(msg_very_verbose, "s =",s);
+    
     
     pmesg_hex(msg_verbose, bufferp, SHA3_512_BLOCK_SIZE, digestsha3_512); 
-    
-    //free(tmp);
-    mpz_clears(sigma,tmp0,r,NULL);
+    mpz_clears(sigma,r, N_2, NULL);
 }
 
 
 /*
  * decrypt
  */
-void decript() {
+void decript(plaintext_t plaintext, const ciphertext_t ciphertext_K) {
     
 }
 
@@ -335,13 +418,19 @@ void plaintext_init(plaintext_t plaintext) {
     mpz_init(plaintext->m);
 }
 
+void ciphertext_init(ciphertext_t ciphertext) {
+    assert(ciphertext);
+    mpz_inits(ciphertext->A, ciphertext->A_1, ciphertext->A_p, ciphertext->B, ciphertext->B_p,
+                   ciphertext->C, ciphertext->C_p,ciphertext->D, NULL);
+}
+
 /*
  * clear method
  */
 
 void public_key_clear(public_key_t pk) {
     assert(pk);
-    mpz_clears(pk->id, pk->N, pk->g0, pk->g1, pk->g2, NULL);
+    mpz_clears(pk->N, pk->g0, pk->g1, pk->g2, NULL);
 }
 
 void private_key_clear(private_key_t sk) {
@@ -362,6 +451,12 @@ void shared_params_clear(shared_params_t params) {
 void plaintext_clear(plaintext_t plaintext) {
     assert(plaintext);
     mpz_clear(plaintext->m);
+}
+
+void ciphertext_clear(ciphertext_t ciphertext) {
+    assert(ciphertext);
+    mpz_inits(ciphertext->A, ciphertext->A_1, ciphertext->A_p, ciphertext->B, ciphertext->B_p,
+                   ciphertext->C, ciphertext->C_p,ciphertext->D, NULL);
 }
     /*do {
         
