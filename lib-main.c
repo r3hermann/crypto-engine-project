@@ -6,8 +6,19 @@
 #include <nettle/sha1.h>
 #include <time.h> 
 
-#define blocks_to_hash 5
-#define block_size (1 << 20) // 1 MiB
+#define perform_hashing(STRUCT_CTX, FNC_INIT, FNC_UPDATE, FNC_DIGEST,DGST_SIZE)    \
+                                ({                                                                                                              \
+                                        struct STRUCT_CTX context;                                                             \
+                                        FNC_INIT(&context);                                                                          \
+                                        uint8_t digest[DGST_SIZE];                                                               \
+                                        char buffer[2048];                                                                             \
+                                                                                                                                                  \
+                                        FNC_UPDATE(&context, block_size, block_to_hash);                         \
+                                        FNC_DIGEST(&context, DGST_SIZE, digest);                                     \
+                                                                                                                                                  \
+                                        pmesg_hex(msg_verbose, buffer, DGST_SIZE, digest);                     \
+                                        digest;                                                                                               \
+                                })
 
 /*
  * get seed
@@ -269,12 +280,6 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     //sigma in Zn random
     mpz_urandomm(sigma,prng, params->N);
     
-    //solo per stampa
-    char bufferp[1000];
-    
-    
-
-    
     //sigma || m || id, (string base 10)
     char *strsig=0;
     
@@ -287,40 +292,41 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     
     char *str_s_m=mpz_get_str(strsig, 10, sigma);
     strcat(str_s_m, mpz_get_str(strsig, 10, plaintext->m));
-    
     strcat(str_s_m,  buff); //H_2 
     
     //length str_s_m
     char *str_s_m_length=&str_s_m[0];
-    int const s_m_length=strlen(str_s_m_length);
+    int const block_size=strlen(str_s_m_length);
     //printf("length (str_s_m)= %d\n",(s_m_length));
     
-    //512 bit output
-    struct sha3_512_ctx ctx512;
-    sha3_512_init (&ctx512);
+    /*struct sha3_512_ctx context;
     uint8_t digestsha3_512[SHA3_512_DIGEST_SIZE];
-    uint8_t block_to_hashsha3_512[s_m_length];
+    sha3_512_init (&context);*/
+    
+    
+    uint8_t block_to_hash[block_size];
     
     printf("\n(sigma||m||id)= ");
-    for(int i=0; i<(s_m_length);i++){
+    for(int i=0; i<block_size;i++){
         printf("%c",str_s_m[i]);
-        block_to_hashsha3_512[i]=(uint8_t)str_s_m[i];
-    }
-    sha3_512_update(&ctx512, s_m_length, block_to_hashsha3_512);
-    sha3_512_digest(&ctx512, SHA3_512_DIGEST_SIZE, digestsha3_512);
+        block_to_hash[i]=(uint8_t)str_s_m[i];
+    }printf("\n");
     
+    //sha3_512_update(&context, block_size, block_to_hash);
+    //sha3_512_digest(&context, SHA3_512_DIGEST_SIZE, digestsha3_512);
     
+    uint8_t *digestsha3_512=(perform_hashing(sha3_512_ctx, sha3_512_init, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE));
+    printf("\n\n");
     
-    //test stampa str_s_m
-    /*printf("\n\n");
+    //test stampa hash
     int len=0;
-    while(str_s_m[len]!='\0') {
-        //printf("%c, ",str_s_m[len]);
+    while(digestsha3_512[len]!='\0') {
+        printf("%02x",digestsha3_512[len]);
         len++;
     }
-    printf("len= %d\n\n",len);*/
+    //printf("len= %d\n\n",len);
 
-    //test print hash
+    //test print hash versione array 
     /*printf("\n\nTest on-line sha3_512_digest: ");
     for (unsigned i = 0; i<SHA3_512_DIGEST_SIZE; i++)
           printf("%02x",digestsha3_512[i]);
@@ -335,6 +341,7 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     mpz_powm(ciphertext_K->A, pk->g0,r,N_2);
     
     //C= H_2 (sigma ) xor m
+    
     
     
     //D=g2^r mod N^2
@@ -370,8 +377,7 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     //pmesg_mpz(msg_very_verbose, "c =",c);
     //pmesg_mpz(msg_very_verbose, "s =",s);
     
-    
-    pmesg_hex(msg_verbose, bufferp, SHA3_512_BLOCK_SIZE, digestsha3_512); 
+
     mpz_clears(sigma,r, N_2, NULL);
 }
 
