@@ -12,7 +12,7 @@
 #define mr_iterations 15
 #define BYTEREAD sizeof(char)*4
 
-#define hashing(struct_ctx, fnc_init,fnc_update, fnc_difest, dgst_size)
+
 
 //step di progressione
 typedef enum {
