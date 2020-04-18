@@ -20,7 +20,28 @@
                                         digest;                                                                                               \
                                 })
 
-/*
+                                
+#define ul_to_char(HASHID)                                                                \
+                    ({                                                                                     \
+                          const int n= snprintf(NULL, 0, "%lu", HASHID);         \
+                          assert(n>0);                                                              \
+                          char buffer[19+1];                                                     \
+                          int c = snprintf(buffer, 19+1, "%lu", HASHID);          \
+                          assert(c==n);                                                           \
+                          buffer;                                                                       \
+                    })
+
+#define TestingHash(DIGEST)                                       \
+                    ({                                                               \
+                            printf("test hash online: ");                \
+                            int len=0;                                           \
+                            while(DIGEST[len]!='\0') {                 \
+                                printf("%02x",DIGEST[len]);           \
+                                len++;                                            \
+                            }                                                         \
+                        })
+                    
+/*printf("bufferMACRO= %s, n=%d, c=%d, sizeBuffer= %ld\n",buffer,n,c,sizeof(buffer));         \
  * get seed
  */
 long random_seed () {
@@ -146,7 +167,7 @@ void generate_shared_params(shared_params_t params, unsigned n_bits, gmp_randsta
 void PRE_scheme_state (state_t PRE_state) {
     
     unsigned int buffer[3];
-    int byte_count=16;
+    int byte_count=15;
     FILE *dev_random;
     dev_random = fopen("/dev/random", "r");
 
@@ -283,25 +304,25 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     //sigma || m || id, (string base 10)
     char *strsig=0;
     
-    const int n= snprintf(NULL, 0, "%lu", PRE_state->h_1);
-    assert(n>0);
-    char buff[n+1];
-    int c = snprintf(buff, n+1, "%lu",PRE_state->h_1);
-    assert(buff[n]=='\0');
-    assert(c==n);
     
+   /*const int n= snprintf(NULL, 0, "%lu", PRE_state->h_1);
+    assert(n>0);
+    char buffp[n+1];
+    int c = snprintf(buffp, n+1, "%lu",PRE_state->h_1);*/
+    /*assert(buff[n]=='\0');
+    assert(c==n);*/
+    
+    //attenzione alla dimesione PRE_state->h_1, 
+    //viene passata quella del puntatore    
     char *str_s_m=mpz_get_str(strsig, 10, sigma);
     strcat(str_s_m, mpz_get_str(strsig, 10, plaintext->m));
-    strcat(str_s_m,  buff); //H_2 
+    strcat(str_s_m,  ul_to_char(PRE_state->h_1)); //H_1
+    //printf("Size PRE_state->h_1= %ld, n=%d, c=%d, sizeBuffp= %ld\n",sizeof(PRE_state->h_1),n,c,sizeof(buffp));
     
     //length str_s_m
     char *str_s_m_length=&str_s_m[0];
     int const block_size=strlen(str_s_m_length);
     //printf("length (str_s_m)= %d\n",(s_m_length));
-    
-    /*struct sha3_512_ctx context;
-    uint8_t digestsha3_512[SHA3_512_DIGEST_SIZE];
-    sha3_512_init (&context);*/
     
     
     uint8_t block_to_hash[block_size];
@@ -310,27 +331,15 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     for(int i=0; i<block_size;i++){
         printf("%c",str_s_m[i]);
         block_to_hash[i]=(uint8_t)str_s_m[i];
-    }printf("\n");
-    
-    //sha3_512_update(&context, block_size, block_to_hash);
-    //sha3_512_digest(&context, SHA3_512_DIGEST_SIZE, digestsha3_512);
+    }printf("\n\n");
+
     
     uint8_t *digestsha3_512=(perform_hashing(sha3_512_ctx, sha3_512_init, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE));
-    printf("\n\n");
+    printf("\n");
     
     //test stampa hash
-    int len=0;
-    while(digestsha3_512[len]!='\0') {
-        printf("%02x",digestsha3_512[len]);
-        len++;
-    }
-    //printf("len= %d\n\n",len);
-
-    //test print hash versione array 
-    /*printf("\n\nTest on-line sha3_512_digest: ");
-    for (unsigned i = 0; i<SHA3_512_DIGEST_SIZE; i++)
-          printf("%02x",digestsha3_512[i]);
-    printf("\n\n");*/
+    //TestingHash(digestsha3_512);
+    
     
     mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0,digestsha3_512);
     //gmp_printf("check r: %Zd\n", r);
