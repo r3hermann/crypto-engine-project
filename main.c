@@ -56,7 +56,7 @@ int main (int argc, char* argv[]){
     long prng_seed=random_seed();
     //printf("random_seed %ld\n",seed);
     
-    if (*argv[1]=='\0') {
+    if (argv[1] == NULL) {
         printf("esecuzione minimale...\n\n");
     }
     
@@ -161,6 +161,7 @@ int main (int argc, char* argv[]){
     }
     //gmp_printf("check plaintext->m: %Zd\n", plaintext_msg->m);
     //gmp_printf("check N: %Zd\n", params->N);
+    
     
     ciphertext_init(K);
    printf("\nCifratura...\n");
