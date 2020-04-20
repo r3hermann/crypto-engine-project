@@ -6,41 +6,68 @@
 #include <nettle/sha1.h>
 #include <time.h> 
 
-#define perform_hashing(STRUCT_CTX, FNC_INIT, FNC_UPDATE, FNC_DIGEST,DGST_SIZE)    \
-                                ({                                                                                                              \
-                                        struct STRUCT_CTX context;                                                             \
-                                        FNC_INIT(&context);                                                                          \
-                                        uint8_t digest[DGST_SIZE];                                                               \
-                                        char buffer[2048];                                                                             \
-                                                                                                                                                  \
-                                        FNC_UPDATE(&context, block_size, block_to_hash);                         \
-                                        FNC_DIGEST(&context, DGST_SIZE, digest);                                     \
-                                                                                                                                                  \
-                                        pmesg_hex(msg_verbose, buffer, DGST_SIZE, digest);                     \
-                                        digest;                                                                                               \
-                                })
 
-                                
-#define ul_to_char(HASHID)                                                                \
-                    ({                                                                                     \
-                          const int n= snprintf(NULL, 0, "%lu", HASHID);         \
-                          assert(n>0);                                                              \
-                          char buffer[19+1];                                                     \
-                          int c = snprintf(buffer, 19+1, "%lu", HASHID);          \
-                          assert(c==n);                                                           \
-                          buffer;                                                                       \
-                    })
 
-#define TestingHash(DIGEST)                                       \
-                    ({                                                               \
-                            printf("test hash online: ");                \
-                            int len=0;                                           \
-                            while(DIGEST[len]!='\0') {                 \
-                                printf("%02x",DIGEST[len]);           \
-                                len++;                                            \
-                            }                                                         \
-                        })
-                    
+/*extern inline void TestingHash(uint8_t print_digest) {
+    
+    printf("test hash online: ");                
+    int len=0;
+    while(print_digest[len]!='\0') {                 
+        printf("%02x",print_digest[len]);          
+        len++;                                            
+    }                                                         
+}*/
+ static inline void ul_to_char(unsigned long int h_X, char *result){
+     
+     const int n= snprintf(NULL, 0, "%lu", h_X);
+     //printf("valore da convertire= %lu, n= %d\n",h_X,n);
+    assert(n>0);
+    int c= snprintf(result, n+1, "%lu", h_X);
+    assert(c==n);
+}
+
+static inline  char *concat_hashX( char *str, char *str1, char  converion []){
+    
+    if(str1) {
+        
+        char * concathashX= (char *) malloc(1+strlen(str)+strlen(str1)+strlen(converion));
+        strcpy(concathashX, str);
+        strcat(concathashX, str1);
+        strcat(concathashX,converion);
+        return concathashX;;
+    }
+    else {
+        char * concathashX= (char *) malloc(1+strlen(str)+strlen(converion));
+        strcpy(concathashX, str);
+        strcat(concathashX,converion);
+    
+        return concathashX;
+    }
+
+}
+
+static inline void perform_hashing_sha3_512(char *str_s_m, char * str_s_m_length, uint8_t *digest_result) {
+
+    struct sha3_512_ctx context;
+    sha3_512_init(&context);                                                        
+    char buffer[2048]={0};
+    
+    uint8_t digest [SHA3_512_DIGEST_SIZE];
+    int block_size=strlen(str_s_m_length);
+    uint8_t block_to_hash[block_size];
+    
+    printf("\ndigest test: ");
+    for(int i=0; i<block_size;i++){
+        printf("%c",str_s_m[i]);
+        block_to_hash[i]=(uint8_t)str_s_m[i];
+    }
+    printf("\n");
+                                                                                                                
+    sha3_512_update(&context, block_size, block_to_hash);
+    sha3_512_digest(&context, SHA3_512_DIGEST_SIZE, digest);
+    pmesg_hex(msg_verbose, buffer, SHA3_512_DIGEST_SIZE, digest);
+
+}
 /*printf("bufferMACRO= %s, n=%d, c=%d, sizeBuffer= %ld\n",buffer,n,c,sizeof(buffer));         \
  * get seed
  */
@@ -66,22 +93,6 @@ long random_seed () {
     return seed;
 }
 
-
-/*void state {
-    
-        unsigned int buffer;
-    int byte_count=4;
-    FILE *dev_random;
-	dev_random = fopen("/dev/random", "r");
-    if(dev_random == NULL) {
-		fprintf(stderr, "cannot open random number device!\n");
-		exit(1);
-	}
-    
-	fread(&buffer,sizeof(char), byte_count, dev_random);
-	fclose(dev_random);
-    
-}*/
 
 /* 
  * get shared params
@@ -297,64 +308,42 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     mpz_inits(sigma, tmp, r, N_2, NULL);
     pmesg_mpz(msg_very_verbose, "testo in chiaro", plaintext->m);
     
-    
     //sigma in Zn random
     mpz_urandomm(sigma,prng, params->N);
     
     //sigma || m || id, (string base 10)
-    char *strsig=0;
-    
-    
-   /*const int n= snprintf(NULL, 0, "%lu", PRE_state->h_1);
-    assert(n>0);
-    char buffp[n+1];
-    int c = snprintf(buffp, n+1, "%lu",PRE_state->h_1);*/
-    /*assert(buff[n]=='\0');
-    assert(c==n);*/
-    
-    //attenzione alla dimesione PRE_state->h_1, 
-    //viene passata quella del puntatore    
-    char *str_s_m=mpz_get_str(strsig, 10, sigma);
-    strcat(str_s_m, mpz_get_str(strsig, 10, plaintext->m));
-    strcat(str_s_m,  ul_to_char(PRE_state->h_1)); //H_1
-    //printf("Size PRE_state->h_1= %ld, n=%d, c=%d, sizeBuffp= %ld\n",sizeof(PRE_state->h_1),n,c,sizeof(buffp));
-    
-    //length str_s_m
-    char *str_s_m_length=&str_s_m[0];
-    int const block_size=strlen(str_s_m_length);
-    //printf("length (str_s_m)= %d\n",(s_m_length));
-    
-    
-    uint8_t block_to_hash[block_size];
-    
-    printf("\n(sigma||m||id)= ");
-    for(int i=0; i<block_size;i++){
-        printf("%c",str_s_m[i]);
-        block_to_hash[i]=(uint8_t)str_s_m[i];
-    }printf("\n\n");
+    char converion[16];
+    char *str_sigma=mpz_get_str(NULL, 10, sigma);
+    char *str_m=mpz_get_str(NULL, 10, plaintext->m);
+    ul_to_char(PRE_state->h_1,converion);
 
+    char * concat_h1=concat_hashX(str_sigma, str_m, converion);
     
-    uint8_t *digestsha3_512=(perform_hashing(sha3_512_ctx, sha3_512_init, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE));
-    printf("\n");
+    char *str_s_m_length=&concat_h1[0];
+    uint8_t digest_h_1[SHA3_512_DIGEST_SIZE];
+    perform_hashing_sha3_512(concat_h1, str_s_m_length, digest_h_1); 
     
-    //test stampa hash
-    //TestingHash(digestsha3_512);
-    
-    
-    mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0,digestsha3_512);
-    //gmp_printf("check r: %Zd\n", r);
+    mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_1);//gmp_printf("check r: %Zd\n", r);
     
     mpz_pow_ui(N_2,params->N,2);
     
     //A=go^r mod N^2
-    mpz_powm(ciphertext_K->A, pk->g0,r,N_2);
+    mpz_powm(ciphertext_K->A, pk->g0, r, N_2);
     
-    //C= H_2 (sigma ) xor m
+    //C= H_2 (sigma || id ) xor m
+    char *strsig_h2, converion2[16];
     
+    char *str_id_h_2=mpz_get_str(strsig_h2, 10, sigma);    
+    ul_to_char(PRE_state->h_2, converion2);
     
+    char * concat_h2=concat_hashX(str_id_h_2, NULL,converion2);
     
+    char *str_h_2_length=&concat_h2[0];
+    uint8_t digest_h_2[SHA3_512_DIGEST_SIZE];
+    perform_hashing_sha3_512(concat_h2, str_h_2_length, digest_h_2);
+
     //D=g2^r mod N^2
-    mpz_powm(ciphertext_K->D, pk->g2,r,N_2);
+    //mpz_powm(ciphertext_K->D, pk->g2, r, N_2);
     
     //B=g1^r * (1+sigma*N) mod N^2  ( a*b mod = mod (a mod * b mod ) )
     
@@ -370,10 +359,7 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     mpz_mul(ciphertext_K->B, ciphertext_K->B, tmp);
     mpz_mod(ciphertext_K->B, ciphertext_K->B, N_2);
     
-    
-    
-    
-    
+
     printf("\n\n");
     
     printf("output ciphertext. K=(A, B, D, c, s)\n");
@@ -386,8 +372,9 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     //pmesg_mpz(msg_very_verbose, "c =",c);
     //pmesg_mpz(msg_very_verbose, "s =",s);
     
-
-    mpz_clears(sigma,r, N_2, NULL);
+    free(concat_h1);
+    free(concat_h2);
+    mpz_clears(sigma, r, N_2, tmp, NULL);
 }
 
 
@@ -433,10 +420,10 @@ void plaintext_init(plaintext_t plaintext) {
     mpz_init(plaintext->m);
 }
 
-void ciphertext_init(ciphertext_t ciphertext) {
-    assert(ciphertext);
-    mpz_inits(ciphertext->A, ciphertext->A_1, ciphertext->A_p, ciphertext->B, ciphertext->B_p,
-                   ciphertext->C, ciphertext->C_p,ciphertext->D, NULL);
+void ciphertext_init(ciphertext_t K) {
+    assert(K);
+    mpz_inits(K->A, K->B, K->C, K->D, K->A_1, K->A_p,  K->B_p,
+                    K->C_p,  NULL);
 }
 
 /*
@@ -468,10 +455,10 @@ void plaintext_clear(plaintext_t plaintext) {
     mpz_clear(plaintext->m);
 }
 
-void ciphertext_clear(ciphertext_t ciphertext) {
-    assert(ciphertext);
-    mpz_inits(ciphertext->A, ciphertext->A_1, ciphertext->A_p, ciphertext->B, ciphertext->B_p,
-                   ciphertext->C, ciphertext->C_p,ciphertext->D, NULL);
+void ciphertext_clear(ciphertext_t K) {
+    assert(K);
+        mpz_clears(K->A, K->B, K->C, K->D, K->A_1, K->A_p,  K->B_p,
+                    K->C_p,  NULL);
 }
     /*do {
         
