@@ -136,13 +136,14 @@ typedef struct plaintext_struct plaintext_t[1];
 struct ciphertext_struct{
     
     mpz_t A;
+    mpz_t B;
+    mpz_t C;
+    mpz_t D;
     mpz_t A_1;
     mpz_t A_p;
-    mpz_t B;
     mpz_t B_p;
-    mpz_t C;
     mpz_t C_p;
-    mpz_t D;
+    
 };
 typedef struct ciphertext_struct ciphertext_t[1];
 
