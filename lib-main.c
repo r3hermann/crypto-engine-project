@@ -8,15 +8,17 @@
 
 
 
-/*extern inline void TestingHash(uint8_t print_digest) {
-    
-    printf("test hash online: ");                
-    int len=0;
+static inline void TestingHash(uint8_t print_digest[], long size_digest) {
+    printf("test hash ");
+    long size_array=(size_digest)/sizeof(uint8_t);
+    for(int i=0; i<size_array; i++)
+        printf("%02x",print_digest[i]);
+    /*int len=0;
     while(print_digest[len]!='\0') {                 
-        printf("%02x",print_digest[len]);          
+        printf("%u",print_digest[len]);
         len++;                                            
-    }                                                         
-}*/
+    }*/                                                      
+}
  static inline void ul_to_char(unsigned long int h_X, char *result){
      
      const int n= snprintf(NULL, 0, "%lu", h_X);
@@ -29,7 +31,6 @@
 static inline  char *concat_hashX( char *str, char *str1, char  converion []){
     
     if(str1) {
-        
         char * concathashX= (char *) malloc(1+strlen(str)+strlen(str1)+strlen(converion));
         strcpy(concathashX, str);
         strcat(concathashX, str1);
@@ -46,13 +47,13 @@ static inline  char *concat_hashX( char *str, char *str1, char  converion []){
 
 }
 
-static inline void perform_hashing_sha3_512(char *str_s_m, char * str_s_m_length, uint8_t *digest_result) {
+static inline void perform_hashing_sha3_512(char *str_s_m, char * str_s_m_length, uint8_t *digest) {
 
     struct sha3_512_ctx context;
     sha3_512_init(&context);                                                        
     char buffer[2048]={0};
     
-    uint8_t digest [SHA3_512_DIGEST_SIZE];
+    //uint8_t digest [SHA3_512_DIGEST_SIZE];
     int block_size=strlen(str_s_m_length);
     uint8_t block_to_hash[block_size];
     
@@ -226,8 +227,6 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
     mpz_set(pk->N,params->N);
     mpz_set_ui(pk->id_hash, (PRE_state->h_1)); //primo step alice
     
-    
-
         
     //set sk keys
     mpz_set(sk->p,params->p);
@@ -294,7 +293,7 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
 void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext_t plaintext, const public_key_t pk,
                     ciphertext_t ciphertext_K, const state_t PRE_state) {
     
-    mpz_t sigma, tmp, r, N_2;
+    mpz_t sigma, tmp, tmph, r, N_2;
     assert(prng);
     assert(params);
     assert(plaintext);
@@ -305,7 +304,7 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     assert(mpz_cmp(plaintext->m, params->N) < 0);
     pmesg(msg_verbose, "cifratura...");
     
-    mpz_inits(sigma, tmp, r, N_2, NULL);
+    mpz_inits(sigma, tmp, tmph, r, N_2, NULL);
     pmesg_mpz(msg_very_verbose, "testo in chiaro", plaintext->m);
     
     //sigma in Zn random
@@ -323,27 +322,33 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     uint8_t digest_h_1[SHA3_512_DIGEST_SIZE];
     perform_hashing_sha3_512(concat_h1, str_s_m_length, digest_h_1); 
     
-    mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_1);//gmp_printf("check r: %Zd\n", r);
+    mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_1);//gmp_printf("check r: %Zx\n", r);
     
     mpz_pow_ui(N_2,params->N,2);
     
     //A=go^r mod N^2
     mpz_powm(ciphertext_K->A, pk->g0, r, N_2);
     
-    //C= H_2 (sigma || id ) xor m
-    char *strsig_h2, converion2[16];
-    
-    char *str_id_h_2=mpz_get_str(strsig_h2, 10, sigma);    
+    //H_2 (sigma || id )
+    char converion2[16];
+    char *str_id_h_2=mpz_get_str(NULL, 10, sigma);    
     ul_to_char(PRE_state->h_2, converion2);
-    
     char * concat_h2=concat_hashX(str_id_h_2, NULL,converion2);
-    
     char *str_h_2_length=&concat_h2[0];
     uint8_t digest_h_2[SHA3_512_DIGEST_SIZE];
+    
+    //get hash
     perform_hashing_sha3_512(concat_h2, str_h_2_length, digest_h_2);
 
+    //C= H_2 (sigma || id ) xor m 
+    mpz_import(tmp, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_2);
+    mpz_xor(ciphertext_K->C, tmp, plaintext->m);
+    gmp_printf("check tmpC: %Zx\n", tmp);
+    TestingHash(digest_h_2, sizeof(digest_h_2));
+    
+    
     //D=g2^r mod N^2
-    //mpz_powm(ciphertext_K->D, pk->g2, r, N_2);
+    mpz_powm(ciphertext_K->D, pk->g2, r, N_2);
     
     //B=g1^r * (1+sigma*N) mod N^2  ( a*b mod = mod (a mod * b mod ) )
     
@@ -361,7 +366,6 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     
 
     printf("\n\n");
-    
     printf("output ciphertext. K=(A, B, D, c, s)\n");
     pmesg_mpz(msg_very_verbose, "r =",r);
     pmesg_mpz(msg_very_verbose, "sigma =",sigma);
@@ -374,7 +378,7 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     
     free(concat_h1);
     free(concat_h2);
-    mpz_clears(sigma, r, N_2, tmp, NULL);
+    mpz_clears(sigma, r, N_2, tmp, tmph, NULL);
 }
 
 
