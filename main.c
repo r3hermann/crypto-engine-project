@@ -128,7 +128,7 @@ int main (int argc, char* argv[]){
     
     
     //PRE_state
-    PRE_scheme_state(params, prng, PRE_state);
+    PRE_scheme_state(PRE_state);
     
     //check sui parametri
     if(!verify_params(params)){
