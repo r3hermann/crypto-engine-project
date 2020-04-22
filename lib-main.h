@@ -101,9 +101,9 @@ typedef struct shared_params_struct shared_params_t[1];
  */
 struct PRE_scheme_state_struct {
     
-    mpz_t h_1;
-    mpz_t h_2;
-    mpz_t h_3;
+    unsigned long h_1;
+    unsigned long h_2;
+    unsigned long h_3;
     
     progression_t progression; //0
     mpz_t eph_exp; //1
@@ -195,6 +195,7 @@ void state_clear(state_t state);
 void public_key_clear(public_key_t pk);
 void private_key_clear(private_key_t sk);
 void weak_secret_key_clear(weak_secret_key_t wsk);
+
 void plaintext_clear(plaintext_t plaintext);
 void ciphertext_clear(ciphertext_t ciphertext);
 
@@ -206,7 +207,7 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk,msg_
 void REgen_keys();
 
 //get id hash
-void PRE_scheme_state (const shared_params_t params, gmp_randstate_t prng, state_t PRE_state);
+void PRE_scheme_state (state_t PRE_state);
 
 //encrypt
 void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext_t msg, const public_key_t pk,
