@@ -80,6 +80,7 @@ struct shared_params_struct {
     unsigned int q_1_bits;
 
     mpz_t N;
+    mpz_t NN;
     
     mpz_t p;
     mpz_t p_1;//p'
@@ -100,9 +101,9 @@ typedef struct shared_params_struct shared_params_t[1];
  */
 struct PRE_scheme_state_struct {
     
-    unsigned long int h_1;
-    unsigned long int h_2;
-    unsigned long int h_3;
+    mpz_t h_1;
+    mpz_t h_2;
+    mpz_t h_3;
     
     progression_t progression; //0
     mpz_t eph_exp; //1
@@ -143,10 +144,31 @@ struct ciphertext_struct{
     mpz_t A_p;
     mpz_t B_p;
     mpz_t C_p;
+    mpz_t c;
+    mpz_t s;
+    
+    //
+    mpz_t y_1;
+    mpz_t y_2;
+    mpz_t h;
+    mpz_t g;
     
 };
 typedef struct ciphertext_struct ciphertext_t[1];
 
+/*
+ * SockGen
+ *
+struct SockGen_struct {
+    
+    mpz_t y_1;
+    mpz_t y_2;
+    mpz_t g;
+    mpz_t h;
+    mpz_t g_t;
+    mpz_t h_t;
+};
+typedef struct SockGen_struct SockGen_t[1];*/
 
 /*metodi*/
 
@@ -173,7 +195,6 @@ void state_clear(state_t state);
 void public_key_clear(public_key_t pk);
 void private_key_clear(private_key_t sk);
 void weak_secret_key_clear(weak_secret_key_t wsk);
-
 void plaintext_clear(plaintext_t plaintext);
 void ciphertext_clear(ciphertext_t ciphertext);
 
@@ -181,17 +202,22 @@ void ciphertext_clear(ciphertext_t ciphertext);
 void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk,msg_t msg, state_t state, const shared_params_t params, gmp_randstate_t prng,
                                 const state_t PRE_state);
 
+//
+void REgen_keys();
+
 //get id hash
-void PRE_scheme_state (state_t PRE_state);
+void PRE_scheme_state (const shared_params_t params, gmp_randstate_t prng, state_t PRE_state);
 
 //encrypt
 void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext_t msg, const public_key_t pk,
                         ciphertext_t ciphertext_K, const state_t PRE_state);
 
-void decript(plaintext_t plaintext, const ciphertext_t ciphertext_K);
+//
+void REncrypt();
 
 //
-//void hashing(struct_ctx, fnc_init,fnc_update, fnc_difest, dgst_size);
+void decript(plaintext_t plaintext, const ciphertext_t K);
+
 
 //verifiche
 bool verify_params(const shared_params_t params);
