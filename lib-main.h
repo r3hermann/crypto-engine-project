@@ -217,7 +217,7 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
 void REncrypt();
 
 //
-void decript(plaintext_t plaintext, const ciphertext_t K);
+void decript(plaintext_t plaintext, const ciphertext_t K, const public_key_t pk, const shared_params_t params, const state_t PRE_state);
 
 
 //verifiche
