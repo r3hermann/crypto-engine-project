@@ -159,18 +159,19 @@ int main (int argc, char* argv[]){
         else
             mpz_urandomm(plaintext_msg->m, prng, params->N);
     }
-    //gmp_printf("check plaintext->m: %Zd\n", plaintext_msg->m);
-    //gmp_printf("check N: %Zd\n", params->N);
     
     
     ciphertext_init(K);
    printf("\nCifratura...\n");
    perform_clock_cycles_sampling_period(
        timing, applied_sampling_time, max_samples, tu_millis,{
-           encrypt(params, prng, plaintext_msg,pk, K, PRE_state);},{});
+           encrypt(params, prng, plaintext_msg, pk, K, PRE_state);},{});
    if (do_bench)
-            printf_short_stats(" rsa_encryption", timing, "");
+            printf_short_stats(" encryption", timing, "");
    
+   
+   printf("\nDecifratura...\n");
+   decript(plaintext_msg, K, pk, params, PRE_state);
     /*
     //bob= b, g^b
     printf("Generazione parametri di Bob\n");
