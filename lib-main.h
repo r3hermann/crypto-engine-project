@@ -101,9 +101,9 @@ typedef struct shared_params_struct shared_params_t[1];
  */
 struct PRE_scheme_state_struct {
     
-    unsigned long h_1;
-    unsigned long h_2;
-    unsigned long h_3;
+    uint32_t h_1;
+    uint32_t h_2;
+    uint32_t h_3;
     
     progression_t progression; //0
     mpz_t eph_exp; //1
@@ -217,7 +217,7 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
 void REncrypt();
 
 //
-void decript(plaintext_t plaintext, const ciphertext_t K, const public_key_t pk, const shared_params_t params, const state_t PRE_state);
+void decryption(plaintext_t plaintext, const ciphertext_t K, const public_key_t pk, const shared_params_t params, const state_t PRE_state);
 
 
 //verifiche
