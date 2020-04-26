@@ -10,12 +10,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <nettle/sha1.h>
+#include<errno.h>
 //#include <stdbool.h> //gcc usa C90
 
 #define prng_sec_level 96
 #define default_p_bits 512 //safe-prime piccoli
 
-#define block_size (1 << 20) // 1 MiB
+
 #define blocks_to_hash 5
 
 #define bench_sampling_time 5 /* secondi */
@@ -83,10 +84,10 @@ int main (int argc, char* argv[]){
         }
         
         else {
-            printf("utilizzo eseguibile: ./%s [verbose] [message <n> ]"
+            fprintf(stderr,"utilizzo eseguibile: ./%s [verbose] [message <n> ]"
                      "[bench]\nusare il comando ./%s per un esecuzione minimale\n",
-                basename(argv[0]), basename(argv[0]));
-            exit(1);
+                basename(argv[0]), basename(argv[0]), strerror(errno));
+            exit(EXIT_FAILURE);
         }
         //...
     }
@@ -133,7 +134,7 @@ int main (int argc, char* argv[]){
     //check sui parametri
     if(!verify_params(params)){
         printf("il controllo dei parametri e' fallito\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
    
     //state
@@ -171,7 +172,7 @@ int main (int argc, char* argv[]){
    
    
    printf("\nDecifratura...\n");
-   decript(plaintext_msg, K, pk, params, PRE_state);
+   decryption(plaintext_msg, K, pk, params, PRE_state);
     /*
     //bob= b, g^b
     printf("Generazione parametri di Bob\n");
