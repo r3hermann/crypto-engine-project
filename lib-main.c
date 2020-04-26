@@ -4,8 +4,13 @@
 #include<sys/wait.h>
 #include <nettle/sha3.h>
 #include <nettle/sha1.h>
-#include <time.h> 
+#include <errno.h> 
 
+#define CHECK(filepointer) ({FILE* __val=(filepointer); ( __val ==NULL ? \
+                                ({fprintf(stderr, "ERROR (" __FILE__ ":%d) %s\n",__LINE__,strerror(errno)); \
+                                exit(EXIT_FAILURE);}): (*(int*)__val)); })
+
+#define _EXIT(string)({fprintf(stderr, "%s %s, line %d.\n", string, __FILE__, __LINE__); exit(EXIT_FAILURE);})
 
 
 static inline void TestingHash(char *str, uint8_t print_digest[], long size_digest) {
@@ -34,7 +39,6 @@ static inline void TestingHash(char *str, uint8_t print_digest[], long size_dige
 
 static inline  char *concat_string( char *str, char *str1, char  converion []){
 
-    
     if (converion==NULL){
         
         if(!str1) {
@@ -80,7 +84,7 @@ static inline void perform_hashing_sha3_512(char *str_s_m, char * str_length, ui
     uint8_t block_to_hash[block_size];
     
     printf("\ndigest test_H1-512: ");
-    for(int i=0; i<block_size;i++){
+    for(size_t i=0; i<block_size;i++){
         printf("%c",str_s_m[i]);
         block_to_hash[i]=(uint8_t)str_s_m[i];
     }
@@ -155,14 +159,9 @@ long random_seed () {
     int byte_count;
     int seed=0;
 	byte_count = BYTEREAD;
-	dev_random = fopen("/dev/random", "r");
+	CHECK(dev_random = fopen("/dev/random", "r"));
 	
-    if(dev_random == NULL) {
-		fprintf(stderr, "cannot open random number device!\n");
-		exit(1);
-	}
 	fread(&seed, sizeof(char), byte_count, dev_random);
-
     //printf("\ndati letti: (hex) %x, (int) %d, (int senza segno) %u\n",seed,seed,seed);
     //printf("byte allocati= %ld. byte_count= %d\n",(byte_count)*sizeof(char),byte_count);
 	fclose(dev_random);
@@ -244,12 +243,8 @@ void PRE_scheme_state (state_t PRE_state) {
     unsigned int buffer[3];
     int byte_count=15;
     FILE *dev_random;
-    dev_random = fopen("/dev/random", "r");
+    CHECK(dev_random = fopen("/dev/random", "r"));
 
-    if(dev_random == NULL) {
-		fprintf(stderr, "cannot open random number device!\n");
-		exit(1);
-	}
 	fread(&buffer,sizeof(char), byte_count, dev_random);
     
     PRE_state->h_1=(*(&buffer[0])%10000);
@@ -340,7 +335,6 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
     pmesg_mpz(msg_very_verbose, "q' = ", sk->q_1);
     
     pmesg_mpz(msg_very_verbose, "N^2=", params->NN);
-    
     mpz_clears(alpha, tmp,NULL);
 }
 
@@ -351,18 +345,21 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, msg
 void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext_t plaintext, const public_key_t pk,
                     ciphertext_t ciphertext_K, const state_t PRE_state) {
     
-    mpz_t sigma, tmp, r, t, g0_t, g2_t, tmph3;
-    assert(prng);
     assert(params);
+    assert(prng);
     assert(plaintext);
+    assert(pk);
     assert(ciphertext_K);
+    
+    mpz_t sigma, tmp, r, t, g0_t, g2_t;
+    
     
     //check plaintext, servono ulteriori controlli?
     assert(mpz_cmp_ui(plaintext->m, 0L)>0);
     assert(mpz_cmp(plaintext->m, params->N) < 0);
     pmesg(msg_verbose, "cifratura...");
     
-    mpz_inits(sigma, tmp, r, t, g0_t, g2_t, tmph3, NULL);
+    mpz_inits(sigma, tmp, r, t, g0_t, g2_t, NULL);
     pmesg_mpz(msg_very_verbose, "testo in chiaro", plaintext->m);
     
     //sigma in Zn random
@@ -370,10 +367,8 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     
     //H1 sigma || m || id, (string base 10)
     char converion[16];
-    char *str_m=mpz_get_str(NULL, 10, plaintext->m);
     ul_to_char(PRE_state->h_1,converion);
-    char * concat_h1=concat_string(mpz_get_str(NULL, 10, sigma), str_m, converion);
-    
+    char * concat_h1=concat_string(mpz_get_str(NULL, 10, sigma), mpz_get_str(NULL, 10, plaintext->m), converion);
     
     mpz_set_str(tmp, concat_h1, 10);
     mpz_mod(tmp, tmp, params->NN);
@@ -381,11 +376,9 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     char *str_s_m_length=&tmpH1[0];
     uint8_t digest_h_1[SHA3_512_DIGEST_SIZE];
     
-    
     perform_hashing_sha3_512(tmpH1, str_s_m_length, digest_h_1);
     
     mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_1);//gmp_printf("check r: %Zx\n", r);
-    
     
     
     //A=go^r mod N^2
@@ -397,20 +390,13 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     ul_to_char(PRE_state->h_2, converion2);
     char * concat_h2=concat_string(mpz_get_str(NULL, 10, sigma), NULL, converion2);
     
-    
     mpz_set_str(tmp, concat_h2, 10);
     mpz_mod(tmp, tmp, params->NN);
     char * tmpH2=mpz_get_str(NULL, 10, tmp);
     char *str_h_2_length=&tmpH2[0];
     
-    
-    
-    
     //char *str_h_2_length=&concat_h2[0];
     uint8_t digest_h_2[SHA3_384_DIGEST_SIZE];
-    
-
-    
     perform_hashing_sha3_384(tmpH2, str_h_2_length, digest_h_2);
 
     
@@ -467,6 +453,7 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     
     char * concatSockGen= (char *) malloc(1+strlen(str_A)+strlen(str_D)+strlen(str_g0)+strlen(str_g2)+
                                                 strlen(str_g0t)+strlen(str_g2t)+strlen(str_BC)+strlen(converion3));
+
     strcpy(concatSockGen,str_A);
     strcat(concatSockGen, str_D);
     strcat(concatSockGen, str_g0);
@@ -478,9 +465,9 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     
     
     
-    mpz_set_str(tmph3, concatSockGen, 10);
-    mpz_mod(tmph3, tmph3, params->NN);
-    char * tmpH3=mpz_get_str(NULL, 10, tmph3);
+    mpz_set_str(tmp, concatSockGen, 10);
+    mpz_mod(tmp, tmp, params->NN);
+    char * tmpH3=mpz_get_str(NULL, 10, tmp);
     
     //c= (H_3 A || D || g0 || g2 || BC)
     uint8_t digest_h_3[SHA3_256_DIGEST_SIZE]={0};
@@ -518,9 +505,6 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
         
 
     } while((mpz_cmp_ui(tmp,1)==0) );*/
-
-
-    
     
     printf("\n\n");
     printf("output ciphertext. K=(A, B, D, c, s)\n");
@@ -537,14 +521,14 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
     free(concat_h2);
     free(str_BC);
     free(concatSockGen);
-    mpz_clears(sigma, r, tmp, t, g0_t, g2_t, tmph3, NULL);
+    mpz_clears(sigma, r, tmp, t, g0_t, g2_t, NULL);
 }
 
 
 /*
  * decrypt
  */
-void decript(plaintext_t plaintext, const ciphertext_t K, const public_key_t pk, const shared_params_t params, const state_t PRE_state) {
+void decryption (plaintext_t plaintext, const ciphertext_t K, const public_key_t pk, const shared_params_t params, const state_t PRE_state) {
     
     assert(plaintext);
     assert(pk);
@@ -554,16 +538,15 @@ void decript(plaintext_t plaintext, const ciphertext_t K, const public_key_t pk,
     
     //caso 1 K= A, B, C, D, c, s
     
-    
-    mpz_t g0_s_A_c, g2_s_D_c, check_c, tmp, cmt_sigma;
-    mpz_inits(g0_s_A_c, g2_s_D_c, check_c, tmp, cmt_sigma, NULL);
+    mpz_t g0_s_A_c, g2_s_D_c, check_c, tmp, cmt_sigma, cmt_m;
+    mpz_inits(g0_s_A_c, g2_s_D_c, check_c, tmp, cmt_sigma, cmt_m, NULL);
     
     //g0^s * A^c mod N^2
     mpz_powm(g0_s_A_c, pk->g0, K->s, params->NN);
     mpz_powm(tmp, K->A, K->c, params->NN);
     mpz_mul(g0_s_A_c, g0_s_A_c, tmp);
     mpz_mod(g0_s_A_c, g0_s_A_c, params->NN);
-    gmp_printf("go^t: %Zd\n", g0_s_A_c);
+    //gmp_printf("go^t: %Zd\n", g0_s_A_c);
     
     //g2^s * D^c mod N^2
     mpz_powm(g2_s_D_c, pk->g2, K->s, params->NN);
@@ -599,26 +582,29 @@ void decript(plaintext_t plaintext, const ciphertext_t K, const public_key_t pk,
     mpz_mod(tmp, tmp, params->NN);
     char * tmpcH3=mpz_get_str(NULL, 10, tmp);
     
-
-    
     uint8_t digest_c[SHA3_256_DIGEST_SIZE];
-    
     perform_hashing_sha3_256(tmpcH3, &tmpcH3[0], digest_c);
-    
     mpz_import(check_c, SHA3_256_DIGEST_SIZE,1,1,0,0, digest_c);
     
 
     
-    printf("\n");
     
     gmp_printf("K->c: %Zx\n", K->c);
     gmp_printf("check_c: %Zx\n", check_c);
+    printf("\n");
 
     
-    if(!mpz_cmp(K->c, check_c)==0) {
-        printf("ciphertext non valido\n");
-        exit(1);
-    }
+    if(!mpz_cmp(K->c, check_c)==0)
+        _EXIT("ciphertext non conforme, errore in");
+    
+    
+    //weak_secret
+    /*mpz_powm(cmt_sigma, K->A, a, params->N);
+    mpz_cdiv_q(cmt_sigma, K->B, cmt_sigma);
+    mpz_mod(cmt_sigma, cmt_sigma, params->NN);
+    mpz_cdiv_q(cmt_sigma, cmt_sigma, params->N);
+    
+    mpz_xor(cmt_m, K->C, perform_hashing_sha3_384(cmt_sigma));*/
     
     
     //caso2
@@ -627,7 +613,7 @@ void decript(plaintext_t plaintext, const ciphertext_t K, const public_key_t pk,
     
     
     
-    mpz_clears(g0_s_A_c, g2_s_D_c, check_c, tmp, cmt_sigma, NULL);
+    mpz_clears(g0_s_A_c, g2_s_D_c, check_c, tmp, cmt_sigma, cmt_m, NULL);
     free(string_c);
 }
 
