@@ -86,7 +86,7 @@ int main (int argc, char* argv[]){
         else {
             fprintf(stderr,"utilizzo eseguibile: ./%s [verbose] [message <n> ]"
                      "[bench]\nusare il comando ./%s per un esecuzione minimale\n",
-                basename(argv[0]), basename(argv[0]), strerror(errno));
+                basename(argv[0]), strerror(errno));
             exit(EXIT_FAILURE);
         }
         //...
@@ -172,7 +172,7 @@ int main (int argc, char* argv[]){
    
    
    printf("\nDecifratura...\n");
-   decryption(plaintext_msg, K, pk, params, PRE_state);
+   decryption(K, pk, params, PRE_state, NULL, sk);
     /*
     //bob= b, g^b
     printf("Generazione parametri di Bob\n");
