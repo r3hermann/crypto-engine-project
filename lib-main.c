@@ -549,36 +549,30 @@ void decryption (const ciphertext_t K, const public_key_t pk, const shared_param
         pmesg_mpz(msg_very_verbose, "ord(G)= ", maxordG);
 
 
-        //mpz_set_ui(tmpg, 1);
-
-        //mpz_set_ui(tmpg1)
-        do {
+        //do {
             
             //mpz_add_ui(tmpg, tmpg, 1);
             
 
-            mpz_urandomm(tmpg, prng, params->NN);
+            //mpz_urandomm(tmpg, prng, params->NN);
             
             //tmpg1 in G
-            mpz_urandomm(tmpg1, prng, params->NN);
+            //mpz_urandomm(tmpg1, prng, params->NN);
             
-            mpz_powm(tmp, tmpg1, maxordG, params->NN);
+            //mpz_powm(tmp, tmpg1, maxordG, params->NN);
             
-            if(!mpz_cmp_ui(tmp,1)==0)
-                continue;
+            //} while ( !mpz_cmp_ui(tmp,1)==0 && );
 
             
             //DPL r
-            mpz_powm(r, tmpg, lamb_N, params->NN);
+            mpz_powm(r, K->A, lamb_N, params->NN);
             mpz_sub_ui(r, r, 1);
             mpz_mod(r, r, params->NN);
             mpz_cdiv_q(r, r, params->N);
             
             
-            pmesg_mpz(msg_very_verbose, "generatore candidato di massimo ordine", tmpg1);
-            
             //DPL a
-            mpz_powm(a, tmpg1, lamb_N, params->NN);
+            mpz_powm(a, pk->g1, lamb_N, params->NN);
             mpz_sub_ui(a, a, 1);
             mpz_mod(a, a, params->NN);
             mpz_cdiv_q(a, a, params->N);
@@ -597,10 +591,9 @@ void decryption (const ciphertext_t K, const public_key_t pk, const shared_param
             pmesg_mpz(msg_very_verbose, "gamma2", tmp);*/
             
             
-            mpz_powm(tmp, pk->g0, a, params->NN);
+
+
         
-            //test
-        } while ( !mpz_cmp(tmp, pk->g1)==0);
         
         pmesg_mpz(msg_very_verbose, "PDL: r mod N", r);
         pmesg_mpz(msg_very_verbose, "PDL: a mod N", a);
