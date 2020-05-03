@@ -172,7 +172,7 @@ int main (int argc, char* argv[]){
    
    
    printf("\nDecifratura...\n");
-   decryption(K, pk, params, PRE_state, NULL, sk);
+   decryption(K, pk, params, PRE_state, NULL, sk, prng);
     /*
     //bob= b, g^b
     printf("Generazione parametri di Bob\n");
