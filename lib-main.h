@@ -156,19 +156,6 @@ struct ciphertext_struct{
 };
 typedef struct ciphertext_struct ciphertext_t[1];
 
-/*
- * SockGen
- *
-struct SockGen_struct {
-    
-    mpz_t y_1;
-    mpz_t y_2;
-    mpz_t g;
-    mpz_t h;
-    mpz_t g_t;
-    mpz_t h_t;
-};
-typedef struct SockGen_struct SockGen_t[1];*/
 
 /*metodi*/
 
@@ -217,7 +204,8 @@ void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext
 void REncrypt();
 
 //
-void decryption(plaintext_t plaintext, const ciphertext_t K, const public_key_t pk, const shared_params_t params, const state_t PRE_state);
+void decryption(const ciphertext_t K, const public_key_t pk, const shared_params_t params,
+                        const state_t PRE_state, const weak_secret_key_t wsk, const private_key_t sk, gmp_randstate_t prng);
 
 
 //verifiche
