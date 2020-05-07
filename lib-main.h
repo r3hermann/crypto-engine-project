@@ -12,6 +12,7 @@
 #define mr_iterations 15
 #define BYTEREAD sizeof(char)*4
 
+#define _EXIT(string)({fprintf(stderr,"%s %s, line %d.\n", string, __FILE__, __LINE__);exit(EXIT_FAILURE);})
 
 
 //step di progressione
@@ -20,6 +21,7 @@ typedef enum {
     progression_contrib_sent,
     progression_completed,
 }progression_t;
+
 
 /*
  * keys
@@ -31,28 +33,30 @@ typedef enum { public_key_type, secret_key_type } key_type_t;
  */
 struct public_key_struct {
     
-    /*elementi pubblici*/
     mpz_t id_hash;
     mpz_t N;
     mpz_t g0;
     mpz_t g1;
     mpz_t g2;
+    mpz_t NN;
 
 };
 typedef struct public_key_struct public_key_t[1];
+typedef struct public_key_struct *pk_key_ptr;
+    
 
 /*
  * private key 
  */
 struct private_key_struct {
 
-    /*elementi privati*/
     mpz_t p;
     mpz_t p_1;
     mpz_t q;
     mpz_t q_1;
 };
 typedef struct private_key_struct private_key_t[1];
+
 
 /*
  * weak secret key
@@ -64,7 +68,23 @@ struct weak_secret_key_struct {
     mpz_t b;
     
 };
+typedef struct weak_secret_key_struct *weak_secret_key_ptr;
 typedef struct weak_secret_key_struct weak_secret_key_t[1];
+
+
+/*
+ * undirectional ReEncrypt key
+ */
+struct public_undirectional_Re_encryption_key_struct {
+
+    //mpz_t rk1_x2y;
+    mpz_t k2_x2y;
+    mpz_t A_dot;
+    mpz_t B_dot;
+    mpz_t C_dot;
+    
+};
+typedef struct public_undirectional_Re_encryption_key_struct re_encryption_key_t [1];    
 
 /*
  * parametri condivisi
@@ -80,7 +100,6 @@ struct shared_params_struct {
     unsigned int q_1_bits;
 
     mpz_t N;
-    mpz_t NN;
     
     mpz_t p;
     mpz_t p_1;//p'
@@ -117,6 +136,7 @@ typedef struct PRE_scheme_state_struct state_t[1];
  * msg
  */
 struct msg_struct {
+    
     mpz_t contrib;
 };
 typedef struct msg_struct *msg_ptr;
@@ -134,27 +154,32 @@ typedef struct plaintext_struct plaintext_t[1];
 /*
  * ciphertext
  */
-struct ciphertext_struct{
+typedef struct ciphertext_struct_ABCDcs{
     
     mpz_t A;
     mpz_t B;
     mpz_t C;
     mpz_t D;
-    mpz_t A_1;
-    mpz_t A_p;
-    mpz_t B_p;
-    mpz_t C_p;
     mpz_t c;
     mpz_t s;
+} ciphertext_tip_1;
+
+typedef struct ciphertext_struct_ABA_1CABC_dot{
     
-    //
-    mpz_t y_1;
-    mpz_t y_2;
-    mpz_t h;
-    mpz_t g;
+    mpz_t A;
+    mpz_t A_1;
+    mpz_t B;
+    mpz_t C;
+    mpz_t A_dot;
+    mpz_t B_dot;
+    mpz_t C_dot;
+} ciphertext_tip_2;
+
+typedef union {
     
-};
-typedef struct ciphertext_struct ciphertext_t[1];
+    ciphertext_tip_1 K;
+    ciphertext_tip_2 K_1;
+} ciphertext_t[1];
 
 
 /*metodi*/
@@ -173,6 +198,7 @@ void state_init(state_t state);
 void msg_init(msg_t msg);
 void plaintext_init(plaintext_t plaintext);
 void ciphertext_init(ciphertext_t ciphertext);
+void public_key_init(public_key_t pkX);
 
 //clear
 void shared_params_clear(shared_params_t params);
@@ -182,30 +208,35 @@ void state_clear(state_t state);
 void public_key_clear(public_key_t pk);
 void private_key_clear(private_key_t sk);
 void weak_secret_key_clear(weak_secret_key_t wsk);
+void ReKeyGen_keys_clear(re_encryption_key_t RE_enc_key);
 
 void plaintext_clear(plaintext_t plaintext);
 void ciphertext_clear(ciphertext_t ciphertext);
+void ReEnciphertext_clear(ciphertext_t K);
+
 
 //keyGen
-void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk,msg_t msg, state_t state, const shared_params_t params, gmp_randstate_t prng,
-                                const state_t PRE_state);
+void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk, state_t state,
+                   const shared_params_t params, gmp_randstate_t prng,const state_t PRE_state, msg_t wska_2proxy);
 
-//
-void REgen_keys();
+//RekeyGen
+void RekeyGen(gmp_randstate_t prng, re_encryption_key_t RE_enc_key,
+              const state_t PRE_state, const public_key_t pkY, const private_key_t skX, msg_t wskX);
 
 //get id hash
 void PRE_scheme_state (state_t PRE_state);
 
 //encrypt
-void encrypt(const shared_params_t params, gmp_randstate_t prng, const plaintext_t msg, const public_key_t pk,
-                        ciphertext_t ciphertext_K, const state_t PRE_state);
+void encrypt(gmp_randstate_t prng, const plaintext_t msg, const public_key_t pk,
+                        ciphertext_t K, const state_t PRE_state);
 
 //
-void REncrypt();
+void ReEncrypt(ciphertext_t K, const re_encryption_key_t RE_enc_key, const state_t PRE_state,
+                            const public_key_t pkX);
 
 //
-void decryption(const ciphertext_t K, const public_key_t pk, const shared_params_t params,
-                        const state_t PRE_state, const weak_secret_key_t wsk, const private_key_t sk, gmp_randstate_t prng);
+void decryption(const ciphertext_t K, const public_key_t pk,
+                        const state_t PRE_state, const msg_t wsk_a, const private_key_t sk, gmp_randstate_t prng, uint8_t id_K);
 
 
 //verifiche
