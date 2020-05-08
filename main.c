@@ -11,7 +11,6 @@
 #include <string.h>
 #include <nettle/sha1.h>
 #include<errno.h>
-//#include <stdbool.h> //gcc usa C90
 
 #define prng_sec_level 96
 #define default_p_bits 512 //safe-prime piccoli
@@ -38,22 +37,26 @@ int main (int argc, char* argv[]){
     int p_bits=default_p_bits; //512
 
     state_t alice_state, bob_state, proxy_state;
-    msg_t a2b_msg, b2a_msg, a2p_msg;
+    msg_t wska_msg, b_msg;
     plaintext_t plaintext_msg;
 
     //shared params N
     shared_params_t params;
     
-    //key
-    public_key_t pk;
+    //pk key
+    public_key_t pk, pkX, pk_key_ptr;
+    
+    //sk keys
     private_key_t sk;
     weak_secret_key_t wsk;
+    
+    //ReGen
+    re_encryption_key_t RE_enc_key;
     
     ciphertext_t K;
     state_t PRE_state;
     
     int exit_status=0;
-    
     long prng_seed=random_seed();
     //printf("random_seed %ld\n",seed);
     
@@ -62,7 +65,6 @@ int main (int argc, char* argv[]){
     }
     
 	for(int i=1; i<argc; i++){
-        
          if (strcmp(argv[i], "verbose") == 0)
             set_messaging_level(msg_very_verbose);
          
@@ -75,8 +77,7 @@ int main (int argc, char* argv[]){
             
             
             if(i+1 >= argc) {
-                printf("error: \"message\" errato o mancante \n");
-                exit(1);
+                _EXIT("messaggio errato o mancante. ");
             }
             assert(argv[i+1]);
             fixed_msg = atoi(argv[i+1]);
@@ -89,7 +90,6 @@ int main (int argc, char* argv[]){
                 basename(argv[0]), strerror(errno));
             exit(EXIT_FAILURE);
         }
-        //...
     }
     
     printf("Calibrazione strumenti per il timing...\n");
@@ -133,8 +133,7 @@ int main (int argc, char* argv[]){
     
     //check sui parametri
     if(!verify_params(params)){
-        printf("il controllo dei parametri e' fallito\n");
-        exit(EXIT_FAILURE);
+        _EXIT("controllo dei parametri e' fallito. ");
     }
    
     //state
@@ -142,14 +141,19 @@ int main (int argc, char* argv[]){
     //state_init(bob_state);
    // state_init(proxy_state);
     
-    //msg
-    //msg_init(a2p_msg);
-
+    //public_key_init(pkX);
     
-    //alice= a, g^a
+    //msg
+    msg_init(wska_msg);
+    msg_init(b_msg);
     printf("\n\nGenerazione parametri di Alice\n");
-    generate_keys(pk, sk, wsk, a2p_msg,alice_state, params,prng, PRE_state);
+    generate_keys(pk, sk, wsk, alice_state, params, prng, PRE_state, wska_msg);
+    pkX[0]=pk[0];
+    //pk_key_ptr;
+    
+    ciphertext_init(K);
     plaintext_init(plaintext_msg);
+    
     
     if (fixed_msg > 0) {
         mpz_set_ui(plaintext_msg->m,fixed_msg);
@@ -160,53 +164,49 @@ int main (int argc, char* argv[]){
         else
             mpz_urandomm(plaintext_msg->m, prng, params->N);
     }
+        
     
     
-    ciphertext_init(K);
-   printf("\nCifratura...\n");
-   perform_clock_cycles_sampling_period(
-       timing, applied_sampling_time, max_samples, tu_millis,{
-           encrypt(params, prng, plaintext_msg, pk, K, PRE_state);},{});
-   if (do_bench)
-            printf_short_stats(" encryption", timing, "");
-   
-   
-   printf("\nDecifratura...\n");
-   decryption(K, pk, params, PRE_state, NULL, sk, prng);
-    /*
-    //bob= b, g^b
-    printf("Generazione parametri di Bob\n");
-    generate_contrib(b2a_msg,bob_state,params,prng);
-    //printf("prng_seed: %ld",prng_seed);
-    
-    printf("\nCalcolo chiave condivisa da parte di Alice...\n");
-    compute_key(alice_state,b2a_msg,params);
-    
-    printf("\nCalcolo chiave condivisa da parte di Bob...\n");
-    compute_key(bob_state,a2b_msg,params);
+    printf("\n\nCifratura plaintext...\n");
 
-    //check sulla chiave
-    if(mpz_cmp(alice_state->key,bob_state->key)){
-        printf("errore: le chiavi calcolate non coincidono\n");
-        exit_status=1;
-    }
-    */
+            encrypt(prng, plaintext_msg, pk, K, PRE_state);
+
+            
+    printf("\nDecifratura del messaggio ricevuto...\n");
+    perform_clock_cycles_sampling_period(
+        timing, applied_sampling_time, max_samples, tu_millis,{
+            decryption(K, pk, PRE_state, wska_msg, sk, prng, 1); },{}); //1=K=ABCDcs
+    if (do_bench)
+            printf_short_stats(" Decifratura", timing, "");
     
+    
+    printf("\n\nGenerazione parametri di Bob\n");
+    generate_keys(pk, sk, wsk, bob_state, params, prng, PRE_state, b_msg);
+
+    
+    printf("\nReKeygen dal Proxy...\n");
+    RekeyGen(prng, RE_enc_key, PRE_state, pk, sk, wska_msg);
+    
+    
+    printf("\ncifratura del ciphertext K dal Proxy...\n");
+    ReEncrypt(K, RE_enc_key,PRE_state, pkX);
+    
+    
+    printf("\nDecifratura del messaggio ricevuto...\n");
     
     //clear
-    //msg_clear(a2b_msg);
-    //msg_clear(b2a_msg);
-    //state_clear(alice_state);
-    //state_clear(bob_state);
-    
-    
-    public_key_clear(pk);
-    private_key_clear(sk);
-    weak_secret_key_clear(wsk);
+    msg_clear(b_msg);
+    msg_clear(wska_msg);
+
     shared_params_clear(params);
-    ciphertext_clear(K);
+    private_key_clear(sk);
+    public_key_clear(pkX);
+    public_key_clear(pk);
+    
+    weak_secret_key_clear(wsk);
     plaintext_clear(plaintext_msg);
+    ciphertext_clear(K);
+    ReKeyGen_keys_clear(RE_enc_key);
     gmp_randclear(prng);
     exit(exit_status);
 }
-
