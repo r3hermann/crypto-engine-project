@@ -212,7 +212,7 @@ void generate_keys(public_key_t pk, private_key_t sk, weak_secret_key_t wsk,
     mpz_t alpha, tmp;
     mpz_inits(alpha, tmp, NULL);
     mpz_inits(pk->N, pk->NN, pk->id_hash, pk->g0, pk->g1, pk->g2, NULL);
-    mpz_inits(sk->p,sk->q, sk->p_1, sk->q_1, pk->NN, NULL);    
+    mpz_inits(sk->p,sk->q, sk->p_1, sk->q_1, NULL);    
     mpz_inits(wsk->a, wsk->b, NULL);
     
     //set N, NN e id_hash
@@ -503,7 +503,7 @@ void decryption (const ciphertext_t K, const public_key_t pk,
     mpz_powm(tmp, K->K.A, K->K.c, pk->NN);
     mpz_mul(g0_s_A_c, g0_s_A_c, tmp);
     mpz_mod(g0_s_A_c, g0_s_A_c, pk->NN);
-    gmp_printf("g0_s_A_c: %Zd\n", g0_s_A_c);
+    //gmp_printf("g0_s_A_c: %Zd\n", g0_s_A_c);
     
     //g2^s * D^c mod N^2
     mpz_powm(g2_s_D_c, pk->g2, K->K.s, pk->NN);
@@ -829,9 +829,9 @@ void ReEncrypt (ciphertext_t K, const re_encryption_key_t RE_enc_key, const stat
     assert(pkX);
     
     mpz_t g0X_s_A_c, g2X_s_D_c, tmp, check_c;
-    mpz_inits (g0X_s_A_c, g2X_s_D_c, tmp, check_c, NULL);
-    pmesg_mpz(msg_very_verbose, "\ncheck pkX->g0\n\n", pkX->g0);
-    pmesg_mpz(msg_very_verbose, "\ncheck K->K.s\n\n", K->K.s);
+    mpz_inits (g0X_s_A_c, g2X_s_D_c, tmp, check_c, RE_enc_key->k2_x2y, RE_enc_key->A_dot, RE_enc_key->B_dot, RE_enc_key->C_dot, NULL);
+    //pmesg_mpz(msg_very_verbose, "\ncheck pkX->g0\n\n", pkX->g0);
+    //pmesg_mpz(msg_very_verbose, "\ncheck K->K.s\n\n", K->K.s);
     
     
     //g0X^s * A^c mod N^2
@@ -942,7 +942,7 @@ void ciphertext_init(ciphertext_t K) {
 
 void public_key_init(public_key_t pk) {
     assert(pk);
-    mpz_clears(pk->N, pk->g0, pk->g1, pk->g2, NULL);
+    mpz_clears(pk->N, pk->NN, pk->id_hash, pk->g0, pk->g1, pk->g2, NULL);
 }
 
 /*
