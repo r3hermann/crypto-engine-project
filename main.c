@@ -44,7 +44,7 @@ int main (int argc, char* argv[]){
     shared_params_t params;
     
     //pk key
-    public_key_t pk, *pkX;
+    public_key_t pk, pkX;
     
     //sk keys
     private_key_t sk;
@@ -139,7 +139,7 @@ int main (int argc, char* argv[]){
     }*/
    
   
-    public_key_init(&pk);
+    //public_key_init(&pk);
     
     //msg
     msg_init(&wska_msg);
@@ -147,7 +147,7 @@ int main (int argc, char* argv[]){
     
     printf("\n\nGenerazione parametri di Alice\n");
     generate_keys(&pk, sk, wsk, &params, prng, &PRE_state, &wska_msg);
-    pkX=&pk;
+    pkX=pk;
 
     
     //K.flag=1;
@@ -189,8 +189,8 @@ int main (int argc, char* argv[]){
     RekeyGen(prng, &RE_enc_key, &PRE_state, &pk, sk, &wska_msg);
     
 
-    //printf("\ncifratura del ciphertext K dal Proxy...\n");
-    //ReEncrypt(&K, &RE_enc_key, &PRE_state, pkX);
+    printf("\ncifratura del ciphertext K dal Proxy...\n");
+    ReEncrypt(&K, &RE_enc_key, &PRE_state, &pkX);
     
     
     //printf("\nDecifratura del messaggio ricevuto...\n");
