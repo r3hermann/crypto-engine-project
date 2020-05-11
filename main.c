@@ -138,8 +138,6 @@ int main (int argc, char* argv[]){
         _EXIT("controllo dei parametri e' fallito. ");
     }*/
    
-  
-    //public_key_init(&pk);
     
     //msg
     msg_init(&wska_msg);
@@ -149,11 +147,8 @@ int main (int argc, char* argv[]){
     generate_keys(&pk, sk, wsk, &params, prng, &PRE_state, &wska_msg);
     pkX=pk;
 
-    
-    //K.flag=1;
     ciphertext_init(&K);
     plaintext_init(&plaintext_msg);
-    
     
     if (fixed_msg > 0) {
         mpz_set_ui(plaintext_msg.m,fixed_msg);
@@ -164,8 +159,6 @@ int main (int argc, char* argv[]){
         else
             mpz_urandomm(plaintext_msg.m, prng, params.N);
     }
-        
-    
     
     printf("\n\nCifratura plaintext...\n");
     perform_clock_cycles_sampling_period(
@@ -188,7 +181,7 @@ int main (int argc, char* argv[]){
     printf("ReKeygen dal Proxy in corso...\n");
     RekeyGen(prng, &RE_enc_key, &PRE_state, &pk, sk, &wska_msg);
     
-
+    
     printf("\ncifratura del ciphertext K dal Proxy...\n");
     ReEncrypt(&K, &RE_enc_key, &PRE_state, &pkX);
     
@@ -196,7 +189,6 @@ int main (int argc, char* argv[]){
     //printf("\nDecifratura del messaggio ricevuto...\n");
     
     //clear
-    
     msg_clear(&b_msg);
     msg_clear(&wska_msg);
 
