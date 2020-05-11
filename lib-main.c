@@ -208,18 +208,22 @@ void generate_keys(public_key_t *pk, private_key_t sk, weak_secret_key_t wsk,
     
     assert(params);
     assert(prng);
+    
+    if ( pk==NULL || PRE_state==NULL  )
+        _EXIT("encryption fallita");
+    
     pmesg(msg_verbose, "generazione del contributo...");
     
     mpz_t alpha, tmp;
     mpz_inits(alpha, tmp, NULL);
-    //mpz_inits(pk->N, pk->NN, pk->id_hash, pk->g0, pk->g1, pk->g2, NULL);
+    mpz_inits(pk->N, pk->NN, pk->g0, pk->g1, pk->g2, NULL);
     mpz_inits(sk->p,sk->q, sk->p_1, sk->q_1, NULL);    
     mpz_inits(wsk->a, wsk->b, NULL);
     
     //set N, NN e id_hash
     mpz_set(pk->N, params->N);
     mpz_mul(pk->NN, pk->N, pk->N);
-    pk->id_hash=PRE_state->h_1; //primo step alice //pointer allocato
+    pk->id_hash=PRE_state->h_1;
     
     
     //set sk keys
@@ -879,11 +883,10 @@ void ReEncrypt (ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const st
         _EXIT("ciphertext K di input corrotto");
     
     mpz_t g0X_s_A_c, g2X_s_D_c, tmp, check_c;
-    mpz_inits (g0X_s_A_c, g2X_s_D_c, tmp, check_c, RE_enc_key->k2_x2y, RE_enc_key->A_dot,
-                       RE_enc_key->B_dot, RE_enc_key->C_dot, NULL);
+    mpz_inits (g0X_s_A_c, g2X_s_D_c, tmp, check_c, NULL);
     
     //pmesg_mpz(msg_very_verbose, "\ncheck pkX->g0\n\n", pkX->g0);
-    //pmesg_mpz(msg_very_verbose, "\ncheck K->K.s\n\n", K->K.s);    
+    //pmesg_mpz(msg_very_verbose, "\ncheck K->K.s\n\n", K->info_cipher.K_1.s);    
     
     //g0X^s * A^c mod N^2
     mpz_powm(g0X_s_A_c, pkX->g0, K->info_cipher.K_1.s, pkX->NN);
@@ -920,17 +923,19 @@ void ReEncrypt (ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const st
     mpz_import(check_c, SHA3_256_DIGEST_SIZE,1,1,0,0, digest_chec_c);
     printf("\n");
 
-    printf("\ncontrollo del ciphertext K ricevuto in input\n");
-    //gmp_printf("K->K.c) = %Zx\n", K->K.c);
+    printf("\ncontrollo del ciphertext K ricevuto in input in corso...\n");
+    //gmp_printf(".c) = %Zx\n", K->info_cipher.K_1.c);
+    //gmp_printf(".check_c = %Zx\n\n", check_c);
     
     if(!mpz_cmp(K->info_cipher.K_1.c, check_c)==0) {
-        _EXIT("ciphertext non conforme, errore in fare di re-encryption. ");
+        _EXIT("[ X] ciphertext non conforme, errore in fare di re-encryption. ");
     }
     else {
         printf("[ OK] ciphertext ricevuto conforme alla re-encryption\n");
         
         //A'
         mpz_powm(K->info_cipher.K_2.A_1, pkX->g0, RE_enc_key->k2_x2y, pkX->NN);
+        pmesg_mpz(msg_very_verbose, "RE_enc_key->k2_x2y", RE_enc_key->k2_x2y);
         
         printf("cifratura ciphertext= (A, A', B, C, A_dot, B_dot, C_dot)\n");
         
@@ -941,8 +946,8 @@ void ReEncrypt (ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const st
         
         //valori ricopiati
         mpz_set(K->info_cipher.K_2.A_dot, K->info_cipher.K_1.A);
-        mpz_set(K->info_cipher.K_2.A_dot, K->info_cipher.K_1.B);
-        mpz_set(K->info_cipher.K_2.A_dot, K->info_cipher.K_1.C);
+        mpz_set(K->info_cipher.K_2.B_dot, K->info_cipher.K_1.B);
+        mpz_set(K->info_cipher.K_2.C_dot, K->info_cipher.K_1.C);
         
         pmesg_mpz(msg_very_verbose, "A", K->info_cipher.K_2.A);
         pmesg_mpz(msg_very_verbose, "A_1", K->info_cipher.K_2.A_1);
@@ -1009,8 +1014,9 @@ void msg_init(msg_t *msg) {
 }
 
 void plaintext_init(plaintext_t *plaintext) {
-    //assert(plaintext);
-    mpz_init(plaintext->m);
+    if (plaintext!=0)
+        mpz_init(plaintext->m);
+    else _EXIT("errore sul plaintext");
 }
 
 void ciphertext_init(ciphertext_t *K) {
