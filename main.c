@@ -143,7 +143,7 @@ int main (int argc, char* argv[]){
     
     //msg
     msg_init(&wska_msg);
-    //msg_init(b_msg);
+    msg_init(&b_msg);
     
     printf("\n\nGenerazione parametri di Alice\n");
     generate_keys(&pk, sk, wsk, &params, prng, &PRE_state, &wska_msg);
@@ -181,8 +181,8 @@ int main (int argc, char* argv[]){
     if (do_bench)
             printf_short_stats(" Decifratura", timing, "");
     
-    //printf("\n\nGenerazione parametri di Bob\n");
-    //generate_keys(&pk, sk, wsk, &params, prng, &PRE_state, &b_msg);
+    printf("\n\nGenerazione parametri di Bob\n");
+    generate_keys(&pk, sk, wsk, &params, prng, &PRE_state, &b_msg);
 
     printf("\navvio richiesta di re_encryption...\n");
     printf("ReKeygen dal Proxy in corso...\n");
@@ -197,7 +197,7 @@ int main (int argc, char* argv[]){
     
     //clear
     
-    //msg_clear(b_msg);
+    msg_clear(&b_msg);
     msg_clear(&wska_msg);
 
     shared_params_clear(&params);
