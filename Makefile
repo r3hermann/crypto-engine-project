@@ -14,7 +14,6 @@ ifeq ($(strip $(IS_MAC)$(IS_WIN)$(IS_LNX)),)
 	$(error Unrecognized platform!)
 endif
 
-#LIBS := $(if $(and $(filter yes,$(USE_MPIR)),$(filter yes,$(USE_CUSTOM_LIBS))),$(subst gmp,mpir,$(LIBS)),$(LIBS))
 CUSTOM_LIBS_DIR := $(if $(and $(filter yes,$(USE_MPIR)),$(CUSTOM_MPIR_BASED_LIBS_DIR),$(filter yes,$(USE_CUSTOM_LIBS))),$(CUSTOM_MPIR_BASED_LIBS_DIR),$(CUSTOM_LIBS_DIR))
 USE_RDTSCP := $(if $(IS_LNX)$(IS_WIN), $(shell grep -q rdtscp /proc/cpuinfo && echo yes )) $(if $(IS_MAC), $(shell sysctl -n machdep.cpu.extfeatures | grep -q -i rdtscp && echo yes ))
 
@@ -34,7 +33,7 @@ PLOTS = $(wildcard plots/*.plt)
 PLOTS_SVG = $(PLOTS:.plt=.svg)
 
 COMMA := ,
-CFLAGS += -std=gnu11 -Wall -O0 -ggdb 
+CFLAGS += -std=gnu11  -Wall -O0 -ggdb
 CFLAGS += $(if $(filter yes,$(USE_CUSTOM_LIBS)),-I$(CUSTOM_LIBS_DIR)/include/,)
 LDFLAGS += $(if $(filter yes,$(USE_CUSTOM_LIBS)),-L$(CUSTOM_LIBS_DIR)/lib/ -Wl$(COMMA)-rpath -Wl$(COMMA)$(CUSTOM_LIBS_DIR)/lib/ -L$(CUSTOM_LIBS_DIR)/lib64/ -Wl$(COMMA)-rpath -Wl$(COMMA)$(CUSTOM_LIBS_DIR)/lib64/,) $(if $(filter yes,$(USE_STATIC)),-static)
 CFLAGS += $(if $(filter yes,$(USE_RDTSCP)),-DUSE_RDTSCP,)
@@ -77,9 +76,6 @@ setup_cpus:
 
 restore_cpus:
 	sudo cpupower frequency-set --governor powersave --min 0.4GHz --max 3.1GHz
-
-upload-releases:
-	scp $(RELEASES) diraimondo@www.dmi.unict.it:crypto/1920/examples-*
 
 clean:
 	$(RM) $(EPROGS) $(OBJS) $(POBJS) $(DEPS_FILE) $(PLOTS_SVG) $(OTHER_FILES_TO_CLEAN)
