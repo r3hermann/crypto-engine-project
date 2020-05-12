@@ -42,6 +42,7 @@ struct public_key_struct {
 
 };
 typedef struct public_key_struct public_key_t;
+typedef struct public_key_struct *pk_pointer_t;
     
 
 /*
@@ -54,7 +55,7 @@ struct private_key_struct {
     mpz_t q;
     mpz_t q_1;
 };
-typedef struct private_key_struct private_key_t[1];
+typedef struct private_key_struct private_key_t;
 
 
 /*
@@ -67,8 +68,7 @@ struct weak_secret_key_struct {
     mpz_t b;
     
 };
-typedef struct weak_secret_key_struct *weak_secret_key_ptr;
-typedef struct weak_secret_key_struct weak_secret_key_t[1];
+typedef struct weak_secret_key_struct weak_secret_key_t;
 
 
 /*
@@ -189,12 +189,14 @@ void generate_shared_params(shared_params_t *params, unsigned int p_bits, gmp_ra
 bool compute_key(state_t state, const msg_t other_msg, const shared_params_t params);
 
 //init
-
+void shared_params_init(shared_params_t *params);
 void state_init(state_t state);
 void msg_init(msg_t *msg);
 void plaintext_init(plaintext_t *plaintext);
 void ciphertext_init(ciphertext_t *K);
 void public_key_init(public_key_t *pk);
+void private_key_init(private_key_t *sk);
+void weak_secret_key_init(weak_secret_key_t *wsk);
 void ciphertext_RE_init(ciphertext_t *K);
 
 //clear
@@ -203,8 +205,8 @@ void msg_clear(msg_t *msg);
 void state_clear(state_t state);
 
 void public_key_clear(public_key_t *pk);
-void private_key_clear(private_key_t sk);
-void weak_secret_key_clear(weak_secret_key_t wsk);
+void private_key_clear(private_key_t *sk);
+void weak_secret_key_clear(weak_secret_key_t *wsk);
 void ReKeyGen_keys_clear(re_encryption_key_t *RE_enc_key);
 
 void plaintext_clear(plaintext_t *plaintext);
@@ -213,12 +215,12 @@ void ReEnciphertext_clear(ciphertext_t K);
 
 
 //keyGen
-void generate_keys(public_key_t *pk, private_key_t sk, weak_secret_key_t wsk, const shared_params_t *params,
+void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk, const shared_params_t *params,
                                     gmp_randstate_t prng, const state_t *PRE_state, msg_t *wska_2proxy);
 
 //RekeyGen
 void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key,
-              const state_t *PRE_state, const public_key_t *pkY, const private_key_t skX, msg_t *wskX);
+              const state_t *PRE_state, const public_key_t *pkY, const private_key_t *skX, msg_t *wskX);
 
 //get id hash
 void PRE_scheme_state (state_t *PRE_state);
@@ -233,7 +235,7 @@ void ReEncrypt(ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const sta
 
 //
 void decryption(const ciphertext_t *K, const public_key_t *pk,
-                        const state_t *PRE_state, const msg_t *wsk_a, const private_key_t sk, gmp_randstate_t prng);
+                        const state_t *PRE_state, const msg_t *wsk_a, const private_key_t *sk, gmp_randstate_t prng);
 
 
 //verifiche
