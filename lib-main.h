@@ -24,9 +24,33 @@ typedef enum {
 
 
 /*
- * keys
+ * undirectional ReEncrypt key
  */
-typedef enum { public_key_type, secret_key_type } key_type_t;
+struct public_undirectional_Re_encryption_key_struct {
+
+    //mpz_t rk1_x2y;
+    mpz_t k2_x2y;
+    mpz_t A_dot;
+    mpz_t B_dot;
+    mpz_t C_dot;
+};
+typedef struct public_undirectional_Re_encryption_key_struct re_encryption_key_t;
+
+
+/*
+ * delegator key
+ */
+struct Delegator_struct {
+    
+    uint32_t id_hash;
+    mpz_t N;
+    mpz_t g0;
+    mpz_t g1;
+    mpz_t g2;
+    mpz_t NN;
+};
+typedef struct Delegator_struct delegator_key_t;
+
 
 /*
  * public key
@@ -39,11 +63,12 @@ struct public_key_struct {
     mpz_t g1;
     mpz_t g2;
     mpz_t NN;
-
+    delegator_key_t delegator;
+    
+    mpz_t testing_r;
 };
 typedef struct public_key_struct public_key_t;
-typedef struct public_key_struct *pk_pointer_t;
-    
+
 
 /*
  * private key 
@@ -63,27 +88,10 @@ typedef struct private_key_struct private_key_t;
  */
 struct weak_secret_key_struct {
 
-    /*elementi privati*/
     mpz_t a;
     mpz_t b;
-    
 };
 typedef struct weak_secret_key_struct weak_secret_key_t;
-
-
-/*
- * undirectional ReEncrypt key
- */
-struct public_undirectional_Re_encryption_key_struct {
-
-    //mpz_t rk1_x2y;
-    mpz_t k2_x2y;
-    mpz_t A_dot;
-    mpz_t B_dot;
-    mpz_t C_dot;
-    
-};
-typedef struct public_undirectional_Re_encryption_key_struct re_encryption_key_t;    
 
 /*
  * parametri condivisi
@@ -92,7 +100,7 @@ struct shared_params_struct {
     
     unsigned int N_bits;
     
-    unsigned int p_bits;//
+    unsigned int p_bits;
     unsigned int p_1_bits;
     
     unsigned int q_bits;
@@ -105,7 +113,6 @@ struct shared_params_struct {
     
     mpz_t q;
     mpz_t q_1;//q'
-
 };
 
 //array di shared_params_struct, in questo caso si hanno due array struct
@@ -119,7 +126,6 @@ struct PRE_scheme_state_struct {
     uint16_t h_1;
     uint16_t h_2;
     uint16_t h_3;
-    
 };
 typedef struct PRE_scheme_state_struct state_t;
 
@@ -211,12 +217,12 @@ void ReKeyGen_keys_clear(re_encryption_key_t *RE_enc_key);
 
 void plaintext_clear(plaintext_t *plaintext);
 void ciphertext_clear(ciphertext_t *K);
-void ReEnciphertext_clear(ciphertext_t K);
+void ciphertextK2_clear(ciphertext_t *K);
 
 
 //keyGen
 void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk, const shared_params_t *params,
-                                    gmp_randstate_t prng, const state_t *PRE_state, msg_t *wska_2proxy);
+                                    gmp_randstate_t prng, const state_t *PRE_state, msg_t *wsk_2proxy, char *secret, char *name);
 
 //RekeyGen
 void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key,
@@ -226,7 +232,7 @@ void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key,
 void PRE_scheme_state (state_t *PRE_state);
 
 //encrypt
-void encrypt(gmp_randstate_t prng, const plaintext_t *msg, const public_key_t *pk,
+void encrypt(gmp_randstate_t prng, const plaintext_t *msg,  public_key_t *pk,//const
                         ciphertext_t *K, const state_t *PRE_state);
 
 //
