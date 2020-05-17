@@ -36,15 +36,14 @@ int main (int argc, char* argv[]){
     gmp_randstate_t prng;
     int p_bits=default_p_bits; //512
 
-    state_t alice_state, bob_state, proxy_state;
-    msg_t wska_msg, b_msg;
+    msg_t wsk_msg, b_msg;
     plaintext_t plaintext_msg;
 
     //shared params N
     shared_params_t params;
     
     //pk key
-    public_key_t pk, pkX;
+    public_key_t pk, pkX, *pkproxy;
     
     //sk keys
     private_key_t sk;
@@ -119,7 +118,7 @@ int main (int argc, char* argv[]){
         gmp_randseed_os_rng(prng, prng_sec_level);
     }
     
-    
+    shared_params_init(&params);
     
     //get N=p*q
     printf("\nGenerazione dei parametri comuni. Gruppo di ordine %d bit...\n",p_bits);
@@ -140,18 +139,22 @@ int main (int argc, char* argv[]){
    
     
     //msg
-    msg_init(&wska_msg);
-    msg_init(&b_msg);
+    msg_init(&wsk_msg);
+    
+    public_key_init(&pk);
+    private_key_init(&sk);
+    weak_secret_key_init(&wsk);
     
     printf("\n\nGenerazione parametri di Alice\n");
-    generate_keys(&pk, sk, wsk, &params, prng, &PRE_state, &wska_msg);
+    generate_keys(&pk, &sk, &wsk, &params, prng, &PRE_state, &wsk_msg, "weaka","alice");
     pkX=pk;
-
+    //printf("------->address pkX %p\n", &pkX);
+    
     ciphertext_init(&K);
     plaintext_init(&plaintext_msg);
     
     if (fixed_msg > 0) {
-        mpz_set_ui(plaintext_msg.m,fixed_msg);
+        mpz_set_ui(plaintext_msg.m, fixed_msg);
     }
     else { //random msg
         if (fixed_msg < 0)
@@ -170,36 +173,49 @@ int main (int argc, char* argv[]){
     printf("\nDecifratura del messaggio ricevuto...\n");
     perform_clock_cycles_sampling_period(
         timing, applied_sampling_time, max_samples, tu_millis,{
-            decryption(&K, &pk, &PRE_state, &wska_msg, sk, prng); },{});
+            decryption(&K, &pk, &PRE_state, &wsk_msg, &sk, prng); },{});
     if (do_bench)
             printf_short_stats(" Decifratura", timing, "");
-    
-    printf("\n\nGenerazione parametri di Bob\n");
-    generate_keys(&pk, sk, wsk, &params, prng, &PRE_state, &b_msg);
 
+    //printf("\n\nseconda decifratura\n");
+    //decryption(&K, &pk, &PRE_state, NULL, &sk, prng); 
+    
+    public_key_init(&pk);
+    msg_init(&b_msg);
+    printf("\n\nGenerazione parametri di Bob\n");
+    generate_keys(&pk, &sk, &wsk, &params, prng, &PRE_state, &b_msg, "weekb", "bob");
+    
     printf("\navvio richiesta di re_encryption...\n");
     printf("ReKeygen dal Proxy in corso...\n");
-    RekeyGen(prng, &RE_enc_key, &PRE_state, &pk, sk, &wska_msg);
-    
+    RekeyGen(prng, &RE_enc_key, &PRE_state, &pk, &sk, &wsk_msg); //pk bob
     
     printf("\ncifratura del ciphertext K dal Proxy...\n");
-    ReEncrypt(&K, &RE_enc_key, &PRE_state, &pkX);
+    mpz_init(K.info_cipher.K_2.C_dot);//
+    ReEncrypt(&K, &RE_enc_key, &PRE_state, &pkX); //re-enc cipher under alices pk
     
+    //pk delegator
+    *pk.delegator.g0=*pkX.g0;
+    *pk.delegator.g1=*pkX.g1;
+    *pk.delegator.N=*pkX.N;
+    *pk.delegator.NN=*pkX.NN;
+    printf("\n\nDecifratura del messaggio ricevuto dal Proxy...\n");
+    decryption(&K, &pk, &PRE_state, &b_msg, &sk, prng); //dec bob
     
-    //printf("\nDecifratura del messaggio ricevuto...\n");
+    //printf("\n\ndecifratura ciphertext dal Procy\n");
+    //decryption(&K, &pk, &PRE_state, NULL, &sk, prng); 
     
     //clear
     msg_clear(&b_msg);
-    msg_clear(&wska_msg);
-
-    shared_params_clear(&params);
-    private_key_clear(sk);
-    //public_key_clear(pkX);
+    msg_clear(&wsk_msg);
+    
+    private_key_clear(&sk);
+    public_key_clear(&pkX); //attenzione, usa per conservare la chiave di un altro utente
     public_key_clear(&pk);
-    weak_secret_key_clear(wsk);
+    weak_secret_key_clear(&wsk);
     plaintext_clear(&plaintext_msg);
-    ciphertext_clear(&K);
-    ReKeyGen_keys_clear(&RE_enc_key);
+    ciphertextK2_clear(&K);
+    ReKeyGen_keys_clear(&RE_enc_key); //attenzione
     gmp_randclear(prng);
+    shared_params_clear(&params);
     exit(exit_status);
 }
