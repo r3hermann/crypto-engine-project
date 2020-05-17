@@ -209,12 +209,12 @@ int main (int argc, char* argv[]){
     msg_clear(&wsk_msg);
     
     private_key_clear(&sk);
-    public_key_clear(&pkX); //attenzione, usa per conservare la chiave di un altro utente
+    public_key_clear(&pkX); //
     public_key_clear(&pk);
     weak_secret_key_clear(&wsk);
     plaintext_clear(&plaintext_msg);
     ciphertextK2_clear(&K);
-    ReKeyGen_keys_clear(&RE_enc_key); //attenzione
+    ReKeyGen_keys_clear(&RE_enc_key); //
     gmp_randclear(prng);
     shared_params_clear(&params);
     exit(exit_status);
