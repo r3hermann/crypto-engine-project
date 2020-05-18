@@ -120,10 +120,9 @@ void generate_shared_params(shared_params_t *params, unsigned n_bits, gmp_randst
       
     if (params==NULL)
         _EXIT("errore nella generazione dei parametri");
+    
     assert(n_bits>1);
     assert(prng);
-
-    //mpz_inits(params->N, params->p, params->p_1,params->q, params->q_1, NULL);
 
     //scelta delle taglie di p e q
     params->p_bits=n_bits;
@@ -139,7 +138,7 @@ void generate_shared_params(shared_params_t *params, unsigned n_bits, gmp_randst
     //p della forma 2*p'+1 con p' e p primi
     //q della forma 2*q'+1 con q' e q primi
     
-    //possibile ottimizzazione
+
     do {
         do {
             
@@ -158,13 +157,12 @@ void generate_shared_params(shared_params_t *params, unsigned n_bits, gmp_randst
             //cerco un primo q'
             mpz_urandomb(params->q_1, prng,params->q_1_bits);
         }while((mpz_sizeinbase(params->q_1, 2)< params->q_1_bits) || 
-                     !mpz_probab_prime_p(params->q_1, mr_iterations));
+                    !mpz_probab_prime_p(params->q_1, mr_iterations));
         
         //calcolo q=2*q'+1
         mpz_mul_ui(params->q, params->q_1, 2);
         mpz_add_ui(params->q, params->q,1);
     }while ( !mpz_probab_prime_p(params->q, mr_iterations) );
-
     
     //N=p*q
     mpz_mul(params->N, params->p, params->q);
@@ -212,8 +210,8 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     
     pmesg(msg_verbose, "generazione del contributo...");
     
-    mpz_t alpha, tmp; //testing
-    mpz_inits(alpha, tmp, NULL);
+    mpz_t alpha, tmp, test_1, test_2, test_a;
+    mpz_inits(alpha, tmp, test_1, test_2,test_a, NULL);
     
     //set N, NN e id_hash
     mpz_set(pk->N, params->N);
@@ -235,14 +233,16 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     } while (mpz_get_ui(tmp)!=1L);
     
     // calcolo il range [pp' qq'], maxordG 
-    mpz_mul(tmp, params->N, params->p_1);
-    mpz_mul(tmp,tmp,params->q_1);
-    
+    mpz_mul(tmp, pk->N, sk->p_1);
+    mpz_mul(tmp, tmp, sk->q_1);
+        
     //a,b random in [1,pp' qq'], 0 escluso
     do {
         mpz_urandomm(wsk->a, prng, tmp);
         mpz_urandomm(wsk->b, prng, tmp);
-    } while( (mpz_cmp_ui(wsk->a,0)==0) || (mpz_cmp_ui(wsk->b,0)==0)  );
+    } while( (mpz_cmp_ui(wsk->a,0)==0) || (mpz_cmp_ui(wsk->b,0)==0));
+    
+
     
     //g0 = alpha^2 mod N^2
     mpz_powm_ui(pk->g0, alpha, 2, pk->NN);
@@ -285,7 +285,44 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     pmesg_mpz(msg_very_verbose, "p' = ", sk->p_1);
     pmesg_mpz(msg_very_verbose, "q' = ", sk->q_1);
     
-    pmesg_mpz(msg_very_verbose, "N^2=", pk->NN);    
+    pmesg_mpz(msg_very_verbose, "N^2=", pk->NN);
+    printf("\n\n");
+    
+    
+                    //testing
+                            mpz_mul(tmp, sk->p_1, sk->q_1);
+                            mpz_mul_ui(tmp, tmp, 2);
+                            pmesg_mpz(msg_very_verbose, "lamb_N= ", tmp);
+
+                            //do {
+                            //DPL a, a mod N
+                            mpz_powm(test_a, pk->g1, tmp, pk->NN);
+                            pmesg_mpz(msg_very_verbose, "g1^lamb_N= ", test_a);
+                            
+                            mpz_sub_ui(test_a, test_a, 1);
+                            mpz_mod(test_a, test_a, pk->NN);
+                            pmesg_mpz(msg_very_verbose, "C-1 mod N^2= ", test_a);
+                            
+                            mpz_cdiv_q(test_a, test_a, pk->N);  
+                            
+                           // mpz_gcd(tmp, pk->N, test_a);
+                            //}while (mpz_get_ui(test_a)!=1L);
+                            //pmesg_mpz(msg_very_verbose, "gcd a, ordG= ", test_a);
+                            
+                            printf("\n");
+                            mpz_mod(test_1, wsk->a, pk->N);
+                            pmesg_mpz(msg_very_verbose, "test_1 a mod N diretto= ", test_1);
+                            pmesg_mpz(msg_very_verbose, "test_1 a mod N computato= ", test_a);
+                            //mpz_mod(test_2, pk->testing_r, pk->N);
+                            //pmesg_mpz(msg_very_verbose, "test_2 = ", test_2);
+                
+                            //mpz_mul(test_3, test_1, test_2);
+                            //mpz_mod(test_3, test_3, pk->N);
+                           // pmesg_mpz(msg_very_verbose, "test_3, ar mod N computato = ", test_3);
+    
+    
+    
+    
     
     mpz_clears(alpha, tmp, NULL);
 }
@@ -509,9 +546,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
         printf("controllo idonieta' su K in corso...");
         
         mpz_t g0_s_A_c, g2_s_D_c, check_c, tmp;
-                    
         mpz_inits(g0_s_A_c, g2_s_D_c, check_c, tmp, NULL);
-    
         
         //g0^s * A^c mod N^2
         mpz_powm(g0_s_A_c, pk->g0, K->info_cipher.K_1.s, pk->NN);
@@ -626,8 +661,8 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 
                             
 
-                mpz_powm(cmt_sigma, pk->g0, test_3, pk->NN);
-                //mpz_powm(cmt_sigma, pk->g0, w_1, pk->NN);
+                //mpz_powm(cmt_sigma, pk->g0, test_3, pk->NN);
+                mpz_powm(cmt_sigma, pk->g0, w_1, pk->NN);
                 
                 
                 mpz_invert(cmt_sigma, cmt_sigma, pk->NN);
@@ -842,8 +877,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 
                 mpz_clears (lamb_N, pi, a, r, w_1, NULL);
                 
-                
-                
             }
             
             // compute //
@@ -856,7 +889,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             mpz_mod(tmp, tmp, pk->NN);
             
             char * tmpsig_dot=mpz_get_str(NULL, 10, tmp);
-            
             
             uint8_t digest_cmt_sigma_dot [SHA3_512_DIGEST_SIZE];
             perform_hashing_sha3(sha3_512_ctx, sha3_512_init, sha3_512_update,
@@ -912,7 +944,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 mpz_powm(tmp_c, K->info_cipher.K_2.A, beta_dot_c, pk->delegator.NN);
                 mpz_mul(cmt_sigma, K->info_cipher.K_2.A_1, tmp_c);
                 mpz_mod(cmt_sigma, cmt_sigma, pk->delegator.NN);
-
              
                 mpz_invert(cmt_sigma, cmt_sigma, pk->delegator.NN);
                 mpz_mul(cmt_sigma, K->info_cipher.K_2.B, cmt_sigma);
@@ -1004,9 +1035,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             concat_h1=NULL;
             srt_beta_dot=NULL;
             tmpsigbeta_dot=NULL;
-            
-            
-            
+                       
             mpz_clears(tmp, cmt_m, hashd, cmt_sigma_dot, beta_dot_c, tmp_g2, NULL);
     }
 }
