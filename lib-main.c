@@ -334,7 +334,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                             pmesg_mpz(msg_very_verbose, "test_a, ar mod N computato = ", test_a);
                             
     mpz_clears(alpha, tmp, pp, qq, NULL);
-    exit(1);
+    //exit(1);
 }
 
 
