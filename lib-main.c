@@ -324,18 +324,25 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                     pmesg_mpz(msg_very_verbose, "lamb_N= ", tmp);
                     
                     mpz_powm(test_a, pk->g1, tmp, pk->NN);
+                    pmesg_mpz(msg_very_verbose, "h^(lamb_N) mod N^2 = ", test_a);
                     mpz_sub_ui(test_a, test_a, 1);
                     mpz_mod(test_a, test_a, pk->NN);
                     pmesg_mpz(msg_very_verbose, "C-1 mod N^2 = ", test_a);
                     mpz_cdiv_q(test_a, test_a, pk->N); 
                 
+                    
                             printf("\n");
                             mpz_mod(test_1, wsk->a, pk->N);
                             
                             pmesg_mpz(msg_very_verbose, "test_1 a mod N atteso= ", test_1);
 
                 
-                            pmesg_mpz(msg_very_verbose, "test_a, ar mod N computato = ", test_a);
+                            pmesg_mpz(msg_very_verbose, "test_a, a mod N computato = ", test_a);
+                            
+                            mpz_mul(test_a, wsk->a, pk->N);
+                            mpz_add_ui(test_a, test_a, 1);
+                            mpz_mod(test_a, test_a, pk->NN);
+                            pmesg_mpz(msg_very_verbose, "(1+aN) mod N^2 = ", test_a);
                             
     mpz_clears(alpha, tmp, pp, qq, NULL);
     //exit(1);
