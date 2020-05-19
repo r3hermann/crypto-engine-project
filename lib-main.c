@@ -224,6 +224,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     mpz_set(sk->q, params->q);
     mpz_set(sk->q_1, params->q_1);
     
+    //p^2, q^2 
     mpz_mul(pp, sk->p, sk->p);
     mpz_mul(qq, sk->q, sk->q);
     
@@ -260,6 +261,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
             printf("\n\nQR(g0)=%d, g0 potrebbe essere un QR\n", mpz_jacobi(pk->g0,pk->NN));
             if(!(mpz_legendre(pk->g0, pp)==1 && mpz_legendre(pk->g0, qq)==1))
                 continue;
+            //check
             else {printf("g0/p^2= %d, g0/q^2= %d\n\n",mpz_legendre(pk->g0, pp), mpz_legendre(pk->g0, qq));}
         }
         else continue;
@@ -323,11 +325,13 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                     
                     mpz_powm(test_a, pk->g1, tmp, pk->NN);
                     mpz_sub_ui(test_a, test_a, 1);
+                    pmesg_mpz(msg_very_verbose, "C-1 mod N^2 = ", test_a);
                     mpz_mod(test_a, test_a, pk->NN);
                     mpz_cdiv_q(test_a, test_a, pk->N); 
                 
                             printf("\n");
                             mpz_mod(test_1, wsk->a, pk->N);
+                            
                             pmesg_mpz(msg_very_verbose, "test_1 a mod N atteso= ", test_1);
 
                 
@@ -354,7 +358,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, public_key_t *p
     assert(mpz_cmp_ui(plaintext->m, 0L)>0);
     assert(mpz_cmp(plaintext->m, pk->N) < 0);
     
-    mpz_inits(sigma, r, tmp, t, g0_t, g2_t, pk->testing_r, NULL);
+    mpz_inits(sigma, r, tmp, t, g0_t, g2_t, NULL);
     
     pmesg_mpz(msg_very_verbose, "testo in chiaro", plaintext->m);
     
@@ -379,7 +383,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, public_key_t *p
     
     //r
     mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_1);
-    mpz_set(pk->testing_r, r);
+    //mpz_set(pk->testing_r, r);
     
     //A=go^r mod N^2
     mpz_powm(ciphertext_K->info_cipher.K_1.A, pk->g0, r, pk->NN);
@@ -740,7 +744,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
 
             
             pmesg_mpz(msg_very_verbose, "compute sigma= ", cmt_sigma);
-            pmesg_mpz(msg_very_verbose, "pk->testing_r= ", pk->testing_r);
             printf("\n");
             
             if(mpz_cmp(tmp, K->info_cipher.K_1.B)==0) {
