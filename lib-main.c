@@ -250,15 +250,22 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     } while( (mpz_cmp_ui(wsk->a,0)==0) || (mpz_cmp_ui(wsk->b,0)==0));
     
 
-    
-    //g0 = alpha^2 mod N^2
-    mpz_powm_ui(pk->g0, alpha, 2, pk->NN);
-    
-    //g1 = g0^a mod N^2
-    mpz_powm(pk->g1, pk->g0, wsk->a, pk->NN);
-    
-    //g2= g0^b mod N^2
-    mpz_powm(pk->g2, pk->g0, wsk->b, pk->NN);
+    do {
+        
+        //g0 = alpha^2 mod N^2
+        mpz_powm_ui(pk->g0, alpha, 2, pk->NN);
+        if (mpz_legendre(pk->g0,pk->NN)!=1)
+            continue;
+        
+        //g1 = g0^a mod N^2
+        mpz_powm(pk->g1, pk->g0, wsk->a, pk->NN);
+        if (mpz_legendre(pk->g1,pk->NN)!=1)
+                continue;
+        
+        //g2= g0^b mod N^2
+        mpz_powm(pk->g2, pk->g0, wsk->b, pk->NN);
+        
+    }while(mpz_legendre(pk->g2,pk->NN)!=1);
         
     if (strcmp(secret, "weaka")==0)
         mpz_set(wsk_2proxy->contrib, wsk->a);
