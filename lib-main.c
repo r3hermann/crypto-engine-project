@@ -210,8 +210,8 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     
     pmesg(msg_verbose, "generazione del contributo...");
     
-    mpz_t alpha, tmp, test_1, test_2, test_a;
-    mpz_inits(alpha, tmp, test_1, test_2,test_a, NULL);
+    mpz_t alpha, tmp,test_1,test_2,test_3,test_a,alpha2;
+    mpz_inits(alpha, tmp, test_1,test_2,test_3,test_a,alpha2,  NULL);
     
     //set N, NN e id_hash
     mpz_set(pk->N, params->N);
@@ -226,12 +226,19 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     
     
     //apha in Z*n^2
-    do {
+    /*do {
         mpz_urandomm(alpha, prng, pk->NN);
         mpz_gcd(tmp, alpha, pk->NN);
         gmp_printf("\ngcd(alpha, N^2) = %Zd\n",tmp);
-    } while (mpz_get_ui(tmp)!=1L);
+    } while (mpz_get_ui(tmp)!=1L);*/
     
+    //testing
+        mpz_urandomm(alpha, prng, pk->N);
+        mpz_urandomm(alpha2, prng, pk->N);
+        mpz_mul(alpha2, alpha2, pk->N);
+        mpz_add(alpha, alpha, alpha2);
+    
+        
     // calcolo il range [pp' qq'], maxordG 
     mpz_mul(tmp, pk->N, sk->p_1);
     mpz_mul(tmp, tmp, sk->q_1);
@@ -289,42 +296,26 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     printf("\n\n");
     
     
-                    //testing
-                            mpz_mul(tmp, sk->p_1, sk->q_1);
-                            mpz_mul_ui(tmp, tmp, 2);
-                            pmesg_mpz(msg_very_verbose, "lamb_N= ", tmp);
-
-                            //do {
-                            //DPL a, a mod N
-                            mpz_powm(test_a, pk->g1, tmp, pk->NN);
-                            pmesg_mpz(msg_very_verbose, "g1^lamb_N= ", test_a);
-                            
-                            mpz_sub_ui(test_a, test_a, 1);
-                            mpz_mod(test_a, test_a, pk->NN);
-                            pmesg_mpz(msg_very_verbose, "C-1 mod N^2= ", test_a);
-                            
-                            mpz_cdiv_q(test_a, test_a, pk->N);  
-                            
-                           // mpz_gcd(tmp, pk->N, test_a);
-                            //}while (mpz_get_ui(test_a)!=1L);
-                            //pmesg_mpz(msg_very_verbose, "gcd a, ordG= ", test_a);
-                            
-                            printf("\n");
-                            mpz_mod(test_1, wsk->a, pk->N);
-                            pmesg_mpz(msg_very_verbose, "test_1 a mod N diretto= ", test_1);
-                            pmesg_mpz(msg_very_verbose, "test_1 a mod N computato= ", test_a);
-                            //mpz_mod(test_2, pk->testing_r, pk->N);
-                            //pmesg_mpz(msg_very_verbose, "test_2 = ", test_2);
+    
+                   //testing
+                    mpz_mul(tmp, sk->p_1, sk->q_1);
+                    mpz_mul_ui(tmp, tmp, 2);
+                    pmesg_mpz(msg_very_verbose, "lamb_N= ", tmp);
+                    
+                    mpz_powm(test_a, pk->g1, tmp, pk->NN);
+                    mpz_sub_ui(test_a, test_a, 1);
+                    mpz_mod(test_a, test_a, pk->NN);
+                    mpz_cdiv_q(test_a, test_a, pk->N); 
                 
-                            //mpz_mul(test_3, test_1, test_2);
-                            //mpz_mod(test_3, test_3, pk->N);
-                           // pmesg_mpz(msg_very_verbose, "test_3, ar mod N computato = ", test_3);
-    
-    
-    
-    
-    
+                            printf("valori passati senza essere computati\n");
+                            mpz_mod(test_1, wsk->a, pk->N);
+                            pmesg_mpz(msg_very_verbose, "test_1 a mod N atteso= ", test_1);
+
+                
+                            pmesg_mpz(msg_very_verbose, "test_a, ar mod N computato = ", test_a);
+                            
     mpz_clears(alpha, tmp, NULL);
+    //exit(1);
 }
 
 
@@ -595,7 +586,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
         
          if (wsk_){
              
-                /*printf("chiave input  per la decifrazione secret key weak\n\n");
+                printf("chiave input  per la decifrazione secret key weak\n\n");
                 printf("digest c valutato correttamente...\n");
                 mpz_powm(cmt_sigma, K->info_cipher.K_1.A, wsk_->contrib, pk->NN);
                 pmesg_mpz(msg_very_verbose, "A^a=g0^ar= ", cmt_sigma);
@@ -609,14 +600,14 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 mpz_mod(cmt_sigma, cmt_sigma, pk->NN);
                 
                 //get sigma
-                mpz_cdiv_q(cmt_sigma, cmt_sigma, pk->N);*/
-            //}
-            //else {
+                mpz_cdiv_q(cmt_sigma, cmt_sigma, pk->N);
+            }
+            else {
                 printf("chiave input  per la decifrazione long term secret key\n\n");
                 printf("digest c valutato correttamente...\n");
-                
-                mpz_t lamb_N, pi, a, r, w_1, test_1, test_2, test_3;
-                mpz_inits (lamb_N, pi, a, r, w_1, test_1, test_2, test_3, NULL);
+                //testing
+                mpz_t lamb_N, pi, a, r, w_1,test_1,test_2,test_3;
+                mpz_inits (lamb_N, pi, a, r, w_1, test_1,test_2,test_3,NULL);
                 
                 //2p'q' (Carmichael's function)
                 mpz_mul(lamb_N, sk->p_1, sk->q_1);
@@ -647,7 +638,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 
                                     
                 //testing
-                            printf("valori passati senza essere computati\n");
+                        /*    printf("valori passati senza essere computati\n");
                             mpz_mod(test_1, wsk_->contrib, pk->N);
                             pmesg_mpz(msg_very_verbose, "test_1 a mod N atteso= ", test_1);
                             mpz_mod(test_2, pk->testing_r, pk->N);
@@ -655,7 +646,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 
                             mpz_mul(test_3, test_1, test_2);
                             mpz_mod(test_3, test_3, pk->N);
-                            pmesg_mpz(msg_very_verbose, "test_3, ar mod N computato = ", test_3);
+                            pmesg_mpz(msg_very_verbose, "test_3, ar mod N computato = ", test_3);*/
                             
                             
                 
