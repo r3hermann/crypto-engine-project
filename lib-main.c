@@ -210,8 +210,8 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     
     pmesg(msg_verbose, "generazione del contributo...");
     
-    mpz_t alpha, tmp,test_1,test_2,test_3,test_a,alpha2;
-    mpz_inits(alpha, tmp, test_1,test_2,test_3,test_a,alpha2,  NULL);
+    mpz_t alpha, tmp,test_1,test_2,test_3,test_a,alpha2, pp, qq;
+    mpz_inits(alpha, tmp, test_1,test_2,test_3,test_a,alpha2,pp, qq,  NULL);
     
     //set N, NN e id_hash
     mpz_set(pk->N, params->N);
@@ -224,6 +224,8 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     mpz_set(sk->q, params->q);
     mpz_set(sk->q_1, params->q_1);
     
+    mpz_mul(pp, sk->p, sk->p);
+    mpz_mul(qq, sk->q, sk->q);
     
     //apha in Z*n^2
     /*do {
@@ -254,22 +256,28 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
         
         //g0 = alpha^2 mod N^2
         mpz_powm_ui(pk->g0, alpha, 2, pk->NN);
-        if (!(mpz_jacobi(pk->g0,pk->NN)==1))
-            continue;
+        if (mpz_jacobi(pk->g0,pk->NN)==1) {
+            printf("\n\nQR(g0)=%d, g0 potrebbe essere un QR\n", mpz_jacobi(pk->g0,pk->NN));
+            if(!(mpz_legendre(pk->g0, pp)==1 && mpz_legendre(pk->g0, qq)==1))
+                continue;
+            else {printf("g0/p^2= %d, g0/q^2= %d\n\n",mpz_legendre(pk->g0, pp), mpz_legendre(pk->g0, qq));}
+        }
+        else continue;
         
         //g1 = g0^a mod N^2
         mpz_powm(pk->g1, pk->g0, wsk->a, pk->NN);
-        if (!(mpz_jacobi(pk->g1,pk->NN)==1))
+        if (mpz_jacobi(pk->g1,pk->NN)==1) {
+            if(!(mpz_legendre(pk->g1, pp)==1 && mpz_legendre(pk->g1, qq)==1))
                 continue;
+        }
+        else continue;
         
         //g2= g0^b mod N^2
         mpz_powm(pk->g2, pk->g0, wsk->b, pk->NN);
+        if(!(mpz_jacobi(pk->g2,pk->NN)==1))
+            continue;
         
-    }while(!(mpz_jacobi(pk->g2,pk->NN)==1));
-        
-    printf("\nJp(g0)= %d\n", mpz_jacobi(pk->g0,pk->NN));
-    printf("Jp(g1)= %d\n", mpz_jacobi(pk->g1,pk->NN));
-    printf("Jp(g2)= %d\n", mpz_jacobi(pk->g2,pk->NN));
+    }while(!(mpz_legendre(pk->g2, pp)==1 && mpz_legendre(pk->g2, qq)==1));
     
     if (strcmp(secret, "weaka")==0)
         mpz_set(wsk_2proxy->contrib, wsk->a);
@@ -325,7 +333,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                 
                             pmesg_mpz(msg_very_verbose, "test_a, ar mod N computato = ", test_a);
                             
-    mpz_clears(alpha, tmp, NULL);
+    mpz_clears(alpha, tmp, pp, qq, NULL);
     exit(1);
 }
 
