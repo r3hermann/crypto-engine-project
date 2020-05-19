@@ -254,19 +254,23 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
         
         //g0 = alpha^2 mod N^2
         mpz_powm_ui(pk->g0, alpha, 2, pk->NN);
-        if (mpz_legendre(pk->g0,pk->NN)!=1)
+        if (!(mpz_legendre(pk->g0,pk->NN)==1))
             continue;
         
         //g1 = g0^a mod N^2
         mpz_powm(pk->g1, pk->g0, wsk->a, pk->NN);
-        if (mpz_legendre(pk->g1,pk->NN)!=1)
+        if (!(mpz_legendre(pk->g1,pk->NN)==1))
                 continue;
         
         //g2= g0^b mod N^2
         mpz_powm(pk->g2, pk->g0, wsk->b, pk->NN);
         
-    }while(mpz_legendre(pk->g2,pk->NN)!=1);
+    }while(!(mpz_legendre(pk->g2,pk->NN)==1));
         
+    printf("\nJp(g0)= %d\n", mpz_legendre(pk->g0,pk->NN));
+    printf("Jp(g1)= %d\n", mpz_legendre(pk->g1,pk->NN));
+    printf("Jp(g2)= %d\n", mpz_legendre(pk->g2,pk->NN));
+    
     if (strcmp(secret, "weaka")==0)
         mpz_set(wsk_2proxy->contrib, wsk->a);
     else
@@ -322,7 +326,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                             pmesg_mpz(msg_very_verbose, "test_a, ar mod N computato = ", test_a);
                             
     mpz_clears(alpha, tmp, NULL);
-    //exit(1);
+    exit(1);
 }
 
 
