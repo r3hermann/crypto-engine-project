@@ -244,7 +244,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
         pmesg_mpz(msg_very_verbose, "alpha =",alpha);
         mpz_urandomm(alpha2, prng, pk->N);
         mpz_mul(alpha2, alpha2, pk->N);
-        pmesg_mpz(msg_very_verbose, "alpha =",alpha2);
+        pmesg_mpz(msg_very_verbose, "alpha2 =",alpha2);
         mpz_add(alpha, alpha, alpha2);
         
         //alpha^lamb_N=1 mod N, alpha^(N*lamb_N)=1 mod N^2
