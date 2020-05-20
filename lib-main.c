@@ -210,8 +210,8 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     
     pmesg(msg_verbose, "generazione del contributo...");
     
-    mpz_t alpha, tmp,test_1,test_2,test_3,test_a,alpha2, pp, qq;
-    mpz_inits(alpha, tmp, test_1,test_2,test_3,test_a,alpha2,pp, qq,  NULL);
+    mpz_t alpha, tmp, tmp1, test_1,test_2,test_3,test_a,alpha2, pp, qq, lamb_N;
+    mpz_inits(alpha, tmp, tmp1, test_1,test_2,test_3,test_a,alpha2,pp, qq,  lamb_N, NULL);
     
     //set N, NN e id_hash
     mpz_set(pk->N, params->N);
@@ -236,10 +236,39 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     } while (mpz_get_ui(tmp)!=1L);*/
     
     //testing
+    mpz_mul(lamb_N, sk->p_1, sk->q_1);
+    mpz_mul_ui(lamb_N, lamb_N, 2);
+    do{
+        
         mpz_urandomm(alpha, prng, pk->N);
+        pmesg_mpz(msg_very_verbose, "alpha =",alpha);
         mpz_urandomm(alpha2, prng, pk->N);
         mpz_mul(alpha2, alpha2, pk->N);
+        pmesg_mpz(msg_very_verbose, "alpha =",alpha2);
         mpz_add(alpha, alpha, alpha2);
+        
+        //alpha^lamb_N=1 mod N, alpha^(N*lamb_N)=1 mod N^2
+        mpz_powm(tmp, alpha, lamb_N, pk->N);
+        mpz_powm(tmp1, alpha, lamb_N, pk->N);
+        
+    }while(!mpz_cmp_ui(tmp,1)==0 && !mpz_cmp_ui(tmp1,1)==0);
+        //testing
+        //mpz_set_ui(alpha, 363);
+        /*
+                 
+        do {
+                
+            //g2= g0^b mod N^2
+            mpz_powm(pk->g2, pk->g0, wsk->b, pk->NN);
+            mpz_urandomm(y, prng, pk->N);
+            
+            mpz_urandomm(alpha2, prng, pk->N);
+            mpz_mul(alpha2, alpha2, pk->N);
+            
+            mpz_add(y, y, alpha2);
+            mpz_powm(tmp, y, pk->N, pk->NN);
+            
+        }while(!mpz_cmp(pk->g2, tmp)==0);*/
     
         
     // calcolo il range [pp' qq'], maxordG 
@@ -319,11 +348,9 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     
     
                    //testing
-                    mpz_mul(tmp, sk->p_1, sk->q_1);
-                    mpz_mul_ui(tmp, tmp, 2);
-                    pmesg_mpz(msg_very_verbose, "lamb_N= ", tmp);
+                    pmesg_mpz(msg_very_verbose, "lamb_N= ", lamb_N);
                     
-                    mpz_powm(test_a, pk->g1, tmp, pk->NN);
+                    mpz_powm(test_a, pk->g1, lamb_N, pk->NN);
                     pmesg_mpz(msg_very_verbose, "h^(lamb_N) mod N^2 = ", test_a);
                     mpz_sub_ui(test_a, test_a, 1);
                     mpz_mod(test_a, test_a, pk->NN);
@@ -345,7 +372,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                             pmesg_mpz(msg_very_verbose, "(1+aN) mod N^2 = ", test_a);
                             
     mpz_clears(alpha, tmp, pp, qq, NULL);
-    //exit(1);
+    exit(1);
 }
 
 
