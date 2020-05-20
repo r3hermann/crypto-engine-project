@@ -367,11 +367,18 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                 
                             pmesg_mpz(msg_very_verbose, "test_a, a mod N computato = ", test_a);
                             
+                            
+                            mpz_add_ui(test_a, pk->N, 1);
+                            mpz_powm(test_a, test_a, wsk->a, pk->NN);
+                            printf("\n\n");
+                            pmesg_mpz(msg_very_verbose, "(1+N)^a mod N^2 = ", test_a);
+                                                        
                             mpz_mul(test_a, wsk->a, pk->N);
                             mpz_add_ui(test_a, test_a, 1);
                             mpz_mod(test_a, test_a, pk->NN);
-                            printf("\n\n");
+                            printf("\n");
                             pmesg_mpz(msg_very_verbose, "(1+aN) mod N^2 = ", test_a);
+                            
                             
     mpz_clears(alpha, tmp, pp, qq, NULL);
     exit(1);//terminazione
