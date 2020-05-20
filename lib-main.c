@@ -369,10 +369,11 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                             mpz_mul(test_a, wsk->a, pk->N);
                             mpz_add_ui(test_a, test_a, 1);
                             mpz_mod(test_a, test_a, pk->NN);
+                            printf("\n\n");
                             pmesg_mpz(msg_very_verbose, "(1+aN) mod N^2 = ", test_a);
                             
     mpz_clears(alpha, tmp, pp, qq, NULL);
-    exit(1);
+    exit(1);//
 }
 
 
