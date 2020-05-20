@@ -177,8 +177,8 @@ int main (int argc, char* argv[]){
     if (do_bench)
             printf_short_stats(" Decifratura", timing, "");
 
-    printf("\n\nseconda decifratura\n");
-    decryption(&K, &pk, &PRE_state, NULL, &sk, prng); 
+    //printf("\n\nseconda decifratura\n");
+    //decryption(&K, &pk, &PRE_state, NULL, &sk, prng); 
     
     public_key_init(&pk);
     msg_init(&b_msg);
