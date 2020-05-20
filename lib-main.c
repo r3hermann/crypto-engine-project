@@ -258,6 +258,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                  
         do {
                 
+            //z=y^n mod n^2, y in Z*n^2, z n-th residue mod n^2
             //g2= g0^b mod N^2
             mpz_powm(pk->g2, pk->g0, wsk->b, pk->NN);
             mpz_urandomm(y, prng, pk->N);
@@ -373,7 +374,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                             pmesg_mpz(msg_very_verbose, "(1+aN) mod N^2 = ", test_a);
                             
     mpz_clears(alpha, tmp, pp, qq, NULL);
-    exit(1);//
+    exit(1);//terminazione
 }
 
 
