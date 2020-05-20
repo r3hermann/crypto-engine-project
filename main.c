@@ -1,3 +1,14 @@
+ /*
+ * 
+ *  H1 sha3_512, H2 sha3_384, H3 sha3_256
+ * 
+ * 
+ * esperimenti da eseguire:
+ * - ./main verbose
+ * - ./main bench
+ * 
+ */
+
 
 #include"lib-main.h"
 #include "lib-mesg.h"
