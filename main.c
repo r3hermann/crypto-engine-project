@@ -54,7 +54,7 @@ int main (int argc, char* argv[]){
     shared_params_t params;
     
     //pk key
-    public_key_t pk, pkX, *pkproxy;
+    public_key_t pk, pkX;
     
     //sk keys
     private_key_t sk;
@@ -67,7 +67,7 @@ int main (int argc, char* argv[]){
     state_t PRE_state;
     
     int exit_status=0;
-    long prng_seed=-1;//random_seed();
+    long prng_seed=random_seed();
     //printf("random_seed %ld\n",seed);
     
     if (argv[1] == NULL) {
@@ -141,7 +141,7 @@ int main (int argc, char* argv[]){
     
     
     //generazione id
-    PRE_scheme_state(&PRE_state);
+    PRE_scheme_state(&PRE_state, prng);
     
     //check sui parametri
     /*if(!verify_params(params)){
