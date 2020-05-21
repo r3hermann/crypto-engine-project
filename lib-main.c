@@ -3,22 +3,22 @@
 #include <sys/types.h>
 #include<sys/wait.h>
 #include <nettle/sha3.h>
-#include <nettle/sha1.h>
 #include <errno.h> 
 
+#define ARRAY_SIZE 16
 
 #define CHECK(filepointer) ({FILE* __val=(filepointer); ( __val ==NULL ?                                      \
                                 ({fprintf(stderr, "ERROR (" __FILE__ ":%d) %s\n",__LINE__,strerror(errno));     \
                                 exit(EXIT_FAILURE);}): (*(int*)__val)); })
 
-                                                    
+
 #define  perform_hashing_sha3(STRUCT_CTX, FNC_INIT, FNC_UPDATE, FNC_DIGEST, DGST_SIZE, STR, STRLEN, DIGESTSXXX)({ \
     struct STRUCT_CTX context;                                                                           \
     FNC_INIT(&context);                                                                                        \
     char buffer[2048]={0};                                                                                   \
     int block_size=strlen(STRLEN);                                                                        \
     uint8_t block_to_hash[block_size];                                                                   \
-    for(size_t i=0; i<block_size;i++){                                                                    \
+    for(int i=0; i<block_size;i++){                                                                    \
                                                           \
         block_to_hash[i]=(uint8_t)STR[i];                                                                  \
     }                                                                                                                       \
@@ -26,7 +26,6 @@
     FNC_DIGEST(&context, DGST_SIZE, DIGESTSXXX);                                           \
     pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                            \
 })
-
 
 static inline void TestingHash(char *str, uint8_t print_digest[], long size_digest) {
     
@@ -53,7 +52,7 @@ static inline void TestingHash(char *str, uint8_t print_digest[], long size_dige
 
 static inline  char *cnt_string( char *str, char *str1, uint16_t id ){
     
-    char  converion [16]={0};
+    char  converion [ARRAY_SIZE]={0};
     if (!str1) {
         
         ul_to_char(id, converion);
@@ -76,7 +75,7 @@ static inline  char *cnt_string( char *str, char *str1, uint16_t id ){
 static inline char * cnt_check_c(char *str, char *str1, char *str2, char *str3, char *str4, char *str5,
                                                 char *str6, char *str7, uint16_t id){
     
-    char converion[16];
+    char converion[ARRAY_SIZE]={0};
     ul_to_char(id,converion);
     
     char *string_c=(char *)malloc(strlen(str)+strlen(str1)+strlen(str2)+strlen(str3)+
@@ -175,23 +174,24 @@ void generate_shared_params(shared_params_t *params, unsigned n_bits, gmp_randst
 }
 
 
-void PRE_scheme_state (state_t *PRE_state) {
+void PRE_scheme_state (state_t *PRE_state, gmp_randstate_t prng) {
     
-    unsigned int buffer[3];
-    int byte_count=16;
-    FILE *dev_random;
-    CHECK(dev_random = fopen("/dev/random", "r"));
+    mpz_t id1, id2, id3;
+    mpz_inits (id1, id2, id3, NULL);
+    
+    mpz_urandomb(id1, prng, 16);
+    mpz_urandomb(id2, prng, 16);
+    mpz_urandomb(id3, prng, 16);
+    
+    //pmesg_mpz(msg_very_verbose, "id1", id1);
+    //pmesg_mpz(msg_very_verbose, "id2", id2);
+    //pmesg_mpz(msg_very_verbose, "id3", id3);
 
-	fread(&buffer,sizeof(char), byte_count, dev_random);
+    PRE_state->h_1=mpz_get_ui(id1);
+    PRE_state->h_2=mpz_get_ui(id2);
+    PRE_state->h_3=mpz_get_ui(id3);
     
-    PRE_state->h_1=(*(&buffer[0])%10000);
-    PRE_state->h_2=(*(&buffer[1])%10000);
-    PRE_state->h_3=(*(&buffer[2])%10000);
-    
-    for(int i=0;i<3;i++)
-        printf(" buffer[%d] = %u", i, buffer[i]%10000);
-    fclose(dev_random);
-    dev_random=NULL;
+    mpz_clears (id1, id2, id3, NULL);
     
 }
 
@@ -352,6 +352,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                     pmesg_mpz(msg_very_verbose, "lamb_N= ", lamb_N);
                     
                     mpz_powm(test_a, pk->g1, lamb_N, pk->NN);
+                    
                     pmesg_mpz(msg_very_verbose, "h^(lamb_N) mod N^2 = ", test_a);
                     mpz_sub_ui(test_a, test_a, 1);
                     mpz_mod(test_a, test_a, pk->NN);
@@ -376,11 +377,11 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                             mpz_mul(test_a, wsk->a, pk->N);
                             mpz_add_ui(test_a, test_a, 1);
                             mpz_mod(test_a, test_a, pk->NN);
-                            printf("\n");
+
                             pmesg_mpz(msg_very_verbose, "(1+aN) mod N^2 = ", test_a);
                             
                             
-    mpz_clears(alpha, tmp, pp, qq, NULL);
+    mpz_clears(alpha, tmp, tmp1, pp, qq, NULL);
     exit(1);//terminazione
 }
 
@@ -388,7 +389,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
 /*
  * encrypt, k=ABCDcs
  */
-void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, public_key_t *pk,//const public_key_t
+void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, const public_key_t *pk,
                     ciphertext_t *ciphertext_K, const state_t *PRE_state) {    
 
     assert(prng);
@@ -421,12 +422,11 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, public_key_t *p
     
     uint8_t digest_h_1[SHA3_512_DIGEST_SIZE];
     printf("\n r=H (sigma||m||id)\n");
+    
     perform_hashing_sha3(sha3_512_ctx, sha3_512_init, sha3_512_update,
                             sha3_512_digest, SHA3_512_DIGEST_SIZE, tmpH1, &tmpH1[0], digest_h_1);
-    
     //r
     mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_1);
-    //mpz_set(pk->testing_r, r);
     
     //A=go^r mod N^2
     mpz_powm(ciphertext_K->info_cipher.K_1.A, pk->g0, r, pk->NN);
@@ -441,6 +441,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, public_key_t *p
     char * tmpH2=mpz_get_str(NULL, 10, tmp);
     uint8_t digest_h_2[SHA3_384_DIGEST_SIZE]={0};
     printf("\n H=(2 sigma || d)\n");
+    
     perform_hashing_sha3(sha3_384_ctx, sha3_384_init, sha3_384_update,
                             sha3_384_digest, SHA3_384_DIGEST_SIZE, tmpH2, &tmpH2[0], digest_h_2);
     
@@ -461,14 +462,14 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, public_key_t *p
     
     //g1^r mod N^2
     mpz_powm(ciphertext_K->info_cipher.K_1.B, pk->g1, r, pk->NN);
-    pmesg_mpz(msg_very_verbose, ">>g1^r= g0^(ar)= mod N^2= ", ciphertext_K->info_cipher.K_1.B);
+    //pmesg_mpz(msg_very_verbose, ">>g1^r= g0^(ar)= mod N^2= ", ciphertext_K->info_cipher.K_1.B);
     
     
     //B=x*y mod N^2
     mpz_mul(ciphertext_K->info_cipher.K_1.B, ciphertext_K->info_cipher.K_1.B, tmp);
     mpz_mod(ciphertext_K->info_cipher.K_1.B, ciphertext_K->info_cipher.K_1.B, pk->NN);
     
-    /** Sok.Gen **/
+    // Sok.Gen //
 
     //set t in 0 ,.., 2^(|N^2|+k) -1
     mpz_set_ui(t, mpz_sizeinbase(pk->NN,2)); //|N^2| is the bit-lenght of N^2
@@ -484,7 +485,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, public_key_t *p
     //pmesg_mpz(msg_very_verbose, "g0_t from encrypt=", g0_t);
     //pmesg_mpz(msg_very_verbose, "g2_t from encrypt=", g2_t);
     
-    char converion3[16];
+    char converion3[ARRAY_SIZE];
     char * str_A=mpz_get_str(NULL, 10, ciphertext_K->info_cipher.K_1.A);
     char * str_D=mpz_get_str(NULL, 10, ciphertext_K->info_cipher.K_1.D);
     char * str_B=mpz_get_str(NULL, 10, ciphertext_K->info_cipher.K_1.B);
@@ -578,6 +579,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, public_key_t *p
     str_g2t=NULL;
     free(tmpH3);
     tmpH3=NULL;
+    
     mpz_clears(sigma, r, tmp, t, g0_t, g2_t, NULL);
 }
 
