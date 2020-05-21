@@ -227,10 +227,10 @@ void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key,
               const state_t *PRE_state, const public_key_t *pkY, const private_key_t *skX, msg_t *wskX);
 
 //get id hash
-void PRE_scheme_state (state_t *PRE_state);
+void PRE_scheme_state (state_t *PRE_state, gmp_randstate_t prng);
 
 //encrypt
-void encrypt(gmp_randstate_t prng, const plaintext_t *msg,  public_key_t *pk,//const
+void encrypt(gmp_randstate_t prng, const plaintext_t *msg,  const public_key_t *pk,
                         ciphertext_t *K, const state_t *PRE_state);
 
 //
