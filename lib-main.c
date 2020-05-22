@@ -393,15 +393,15 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, const public_ke
     assert(prng);
     if ( plaintext==NULL || pk==NULL || ciphertext_K==NULL || PRE_state==NULL  )
         _EXIT("encryption fallita");
-    
+
     mpz_t sigma, r, tmp, t, g0_t, g2_t;
-    
+
     //check plaintext, servono ulteriori controlli?
     assert(mpz_cmp_ui(plaintext->m, 0L)>0);
     assert(mpz_cmp(plaintext->m, pk->N) < 0);
-    
+
     mpz_inits(sigma, r, tmp, t, g0_t, g2_t, NULL);
-    
+
     pmesg_mpz(msg_very_verbose, "testo in chiaro", plaintext->m);
     
     //sigma in Zn random
@@ -423,6 +423,8 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, const public_ke
     
     perform_hashing_sha3(sha3_512_ctx, sha3_512_init, sha3_512_update,
                             sha3_512_digest, SHA3_512_DIGEST_SIZE, tmpH1, &tmpH1[0], digest_h_1);
+    
+    //printf("strlen tmpH1= %ld\n",strlen(&tmpH1[0]));
     //r
     mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_1);
     
@@ -520,6 +522,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, const public_ke
     perform_hashing_sha3(sha3_256_ctx, sha3_256_init, sha3_256_update,
                             sha3_256_digest, SHA3_256_DIGEST_SIZE, tmpH3, &tmpH3[0], digest_h_3);
     
+    //printf("strlen tmpH3= %ld\n",strlen(&tmpH3[0]));
     mpz_import(ciphertext_K->info_cipher.K_1.c, SHA3_256_DIGEST_SIZE,1,1,0,0, digest_h_3);
     
     
@@ -594,28 +597,28 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
     if (pk==NULL || K==NULL || PRE_state==NULL  || sk==NULL )
         _EXIT("encryption fallita");
     
-    mpz_t tmp, cmt_m, hash, cmt_sigma, tmp_g1;
-    mpz_inits(tmp, cmt_m, hash, cmt_sigma, tmp_g1, NULL);
+    mpz_t tmpk1, cmt_m, hash, cmt_sigma, tmp_g1;
+    mpz_inits(tmpk1, cmt_m, hash, cmt_sigma, tmp_g1, NULL);
 
     if (strcmp(K->type, "K=(A, B, D, c, s)")==0) {
         
         printf("ricevuto in input un ciphertext K di tipo K=(A, B, D, c, s)...\n\n");
         printf("controllo idonieta' su K in corso...");
         
-        mpz_t g0_s_A_c, g2_s_D_c, check_c, tmp;
-        mpz_inits(g0_s_A_c, g2_s_D_c, check_c, tmp, NULL);
+        mpz_t g0_s_A_c, g2_s_D_c, check_c, tmp_;
+        mpz_inits(g0_s_A_c, g2_s_D_c, check_c, tmp_, NULL);
         
         //g0^s * A^c mod N^2
         mpz_powm(g0_s_A_c, pk->g0, K->info_cipher.K_1.s, pk->NN);
-        mpz_powm(tmp, K->info_cipher.K_1.A, K->info_cipher.K_1.c, pk->NN);
-        mpz_mul(g0_s_A_c, g0_s_A_c, tmp);
+        mpz_powm(tmp_, K->info_cipher.K_1.A, K->info_cipher.K_1.c, pk->NN);
+        mpz_mul(g0_s_A_c, g0_s_A_c, tmp_);
         mpz_mod(g0_s_A_c, g0_s_A_c, pk->NN);
         //gmp_printf("g0_s_A_c: %Zd\n", g0_s_A_c);
         
         //g2^s * D^c mod N^2
         mpz_powm(g2_s_D_c, pk->g2, K->info_cipher.K_1.s, pk->NN);
-        mpz_powm(tmp, K->info_cipher.K_1.D, K->info_cipher.K_1.c, pk->NN);
-        mpz_mul(g2_s_D_c, g2_s_D_c, tmp); 
+        mpz_powm(tmp_, K->info_cipher.K_1.D, K->info_cipher.K_1.c, pk->NN);
+        mpz_mul(g2_s_D_c, g2_s_D_c, tmp_); 
         mpz_mod(g2_s_D_c, g2_s_D_c, pk->NN);           
                 
         char * str_A=mpz_get_str(NULL, 10, K->info_cipher.K_1.A);
@@ -631,14 +634,15 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
         char *string_c=cnt_check_c(str_A, str_D, str_g0, str_g2, str_g0_s_A_c, str_g2_s_D_c, str_B,
                                                         str_C, PRE_state->h_3);
         
-        mpz_set_str(tmp, string_c, 10);
-        mpz_mod(tmp, tmp, pk->NN);
-        char * tmpcH3=mpz_get_str(NULL, 10, tmp);
+        mpz_set_str(tmp_, string_c, 10);
+        mpz_mod(tmp_, tmp_, pk->NN);
+        char * tmpcH3=mpz_get_str(NULL, 10, tmp_);
 
         uint8_t digest_c[SHA3_256_DIGEST_SIZE];
         perform_hashing_sha3(sha3_256_ctx, sha3_256_init, sha3_256_update,
                                 sha3_256_digest, SHA3_256_DIGEST_SIZE, tmpcH3, &tmpcH3[0], digest_c);
 
+        //printf("strlen tmpcH3= %ld\n",strlen(&tmpcH3[0]));
         mpz_import(check_c, SHA3_256_DIGEST_SIZE,1,1,0,0, digest_c);
         printf("\n");
         
@@ -746,24 +750,25 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             // computing //
             char *str_sigma=mpz_get_str(NULL, 10, cmt_sigma);
             char * str_cmt_sigma=cnt_string(str_sigma, NULL, PRE_state->h_2);
-            mpz_set_str(tmp, str_cmt_sigma, 10);
-            mpz_mod(tmp, tmp, pk->NN);
-            char * tmpsig=mpz_get_str(NULL, 10, tmp);
+            mpz_set_str(tmp_, str_cmt_sigma, 10);
+            mpz_mod(tmp_, tmp_, pk->NN);
+            char * tmpsig=mpz_get_str(NULL, 10, tmp_);
     
             //H2 sgima
             uint8_t digest_cmt_sigma [SHA3_384_DIGEST_SIZE];
             perform_hashing_sha3(sha3_384_ctx, sha3_384_init, sha3_384_update,
                                 sha3_384_digest, SHA3_384_DIGEST_SIZE, tmpsig, &tmpsig[0], digest_cmt_sigma);
         
+            //printf("strlen tmpsig= %ld\n",strlen(&tmpsig[0]));
             //get m
-            mpz_import(tmp, SHA3_384_DIGEST_SIZE,1,1,0,0, digest_cmt_sigma);
-            mpz_xor(cmt_m, K->info_cipher.K_1.C, tmp);
+            mpz_import(tmp_, SHA3_384_DIGEST_SIZE,1,1,0,0, digest_cmt_sigma);
+            mpz_xor(cmt_m, K->info_cipher.K_1.C, tmp_);
             
             char *str_cmt_m=mpz_get_str(NULL, 10, cmt_m);
             char * str_h_sm=cnt_string(str_sigma, str_cmt_m, PRE_state->h_1);
-            mpz_set_str(tmp, str_h_sm, 10);
-            mpz_mod(tmp, tmp, pk->NN);
-            char * tmp_hsm=mpz_get_str(NULL, 10, tmp);
+            mpz_set_str(tmp_, str_h_sm, 10);
+            mpz_mod(tmp_, tmp_, pk->NN);
+            char * tmp_hsm=mpz_get_str(NULL, 10, tmp_);
             
             uint8_t digest_h_sm[SHA3_512_DIGEST_SIZE];// hash decryptor
             printf("\n");
@@ -777,19 +782,19 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             
             //g1^r * (1+sigma*N) mod N^2  ( a*b mod = mod (a mod * b mod ) )
             //(1+sigma*N) mod N^2
-            mpz_mul(tmp, cmt_sigma, pk->N);
-            mpz_add_ui(tmp,tmp,1);
-            mpz_mod(tmp, tmp, pk->NN);
+            mpz_mul(tmp_, cmt_sigma, pk->N);
+            mpz_add_ui(tmp_,tmp_,1);
+            mpz_mod(tmp_, tmp_, pk->NN);
             
             //get B
-            mpz_mul(tmp, tmp_g1, tmp);
-            mpz_mod(tmp, tmp, pk->NN);
+            mpz_mul(tmp_, tmp_g1, tmp_);
+            mpz_mod(tmp_, tmp_, pk->NN);
 
             
             pmesg_mpz(msg_very_verbose, "compute sigma= ", cmt_sigma);
             printf("\n");
             
-            if(mpz_cmp(tmp, K->info_cipher.K_1.B)==0) {
+            if(mpz_cmp(tmp_, K->info_cipher.K_1.B)==0) {
                 
                 printf("\nciphertext conforme, messaggio decifrato correttamente.\n");
                 pmesg_mpz(msg_very_verbose, "message =", cmt_m);
@@ -807,13 +812,12 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 str_h_sm=NULL;
                 str_cmt_m=NULL;
                 
-                mpz_clears(cmt_m, hash, cmt_sigma, tmp_g1, NULL);
+                mpz_clears(cmt_m, hash, cmt_sigma, tmp_g1, tmp_, NULL);
                 
             }
             else  _EXIT("[ X] ciphertext K di input corrotto");
             printf("\n");
-            
-            
+                        
             free(str_A);
             free(str_D);
             free(str_g0);
@@ -835,9 +839,9 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             tmpcH3=NULL;
             string_c=NULL;
             
-            mpz_clears(g0_s_A_c, g2_s_D_c, check_c, tmp, NULL);
+            mpz_clears(g0_s_A_c, g2_s_D_c, check_c, tmpk1, NULL);
         
-    }
+    }//
     
     else if ( strcmp(K->type, "K=(A, A', B, C, A_dot, B_dot, C_dot)")==0)  {
         
@@ -950,6 +954,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             perform_hashing_sha3(sha3_512_ctx, sha3_512_init, sha3_512_update,
                                 sha3_512_digest, SHA3_512_DIGEST_SIZE, tmpsig_dot, &tmpsig_dot[0], digest_cmt_sigma_dot);
         
+            //printf("strlen tmpsig_dot= %ld\n",strlen(&tmpsig_dot[0]));
             mpz_import(tmp, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_cmt_sigma_dot);
             
             //get beta_dot_c
