@@ -16,9 +16,9 @@
     struct STRUCT_CTX context;                                                                           \
     FNC_INIT(&context);                                                                                        \
     char buffer[2048]={0};                                                                                   \
-    int block_size=strlen(STRLEN);                                                                        \
+    size_t block_size=strlen(STRLEN);                                                                        \
     uint8_t block_to_hash[block_size];                                                                   \
-    for(int i=0; i<block_size;i++){                                                                    \
+    for(size_t i=0; i<block_size;i++){                                                                    \
                                                           \
         block_to_hash[i]=(uint8_t)STR[i];                                                                  \
     }                                                                                                                       \
@@ -27,7 +27,7 @@
     pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                            \
 })
 
-static inline void TestingHash(char *str, uint8_t print_digest[], long size_digest) {
+/*static inline void TestingHash(char *str, uint8_t print_digest[], long size_digest) {
     
     // printf("%c", STR[i]);
     printf("test hash %s: ",str);
@@ -35,26 +35,26 @@ static inline void TestingHash(char *str, uint8_t print_digest[], long size_dige
     for(int i=0; i<size_array; i++)
         printf("%02x",print_digest[i]);
     printf("\n");
-    /*int len=0;
+    /int len=0;
     while(print_digest[len]!='\0') {                 
         printf("%u",print_digest[len]);
         len++;                                            
-    }*/                                                      
-}
+    }//                                           
+}*/
 
- static inline void ul_to_char(uint16_t h_X, char *result){
+ static inline void ul_to_char(unsigned long h_X, char *result){
      
-     const int n= snprintf(NULL, 0, "%u", h_X);
+     const int n= snprintf(NULL, 0, "%lu", h_X);
      //printf("valore da convertire= %lu, n= %d\n",h_X,n);
     assert(n>0);
-    snprintf(result, n+1, "%u", h_X);
+    snprintf(result, (size_t)n+1, "%lu", h_X);
 }
 
-static inline  char *cnt_string( char *str, char *str1, uint16_t id ){
+static inline  char *cnt_string( char *str, char *str1, unsigned long id ){
     
     char  converion [ARRAY_SIZE]={0};
     if (!str1) {
-        
+    
         ul_to_char(id, converion);
         char * concatString= (char *) malloc(strlen(str)+strlen(converion)+1);
         strcpy(concatString, str);
@@ -73,7 +73,7 @@ static inline  char *cnt_string( char *str, char *str1, uint16_t id ){
 }
 
 static inline char * cnt_check_c(char *str, char *str1, char *str2, char *str3, char *str4, char *str5,
-                                                char *str6, char *str7, uint16_t id){
+                                                char *str6, char *str7, unsigned long id){
     
     char converion[ARRAY_SIZE]={0};
     ul_to_char(id,converion);
@@ -94,16 +94,13 @@ static inline char * cnt_check_c(char *str, char *str1, char *str2, char *str3, 
 
 
 long random_seed () {
-    
+
     FILE *dev_random;
-    int byte_count;
+    unsigned int byte_count;
     int seed=0;
 	byte_count = BYTEREAD;
 	CHECK(dev_random = fopen("/dev/random", "r"));
-	
 	fread(&seed, sizeof(char), byte_count, dev_random);
-    //printf("\ndati letti: (hex) %x, (int) %d, (int senza segno) %u\n",seed,seed,seed);
-    //printf("byte allocati= %ld. byte_count= %d\n",(byte_count)*sizeof(char),byte_count);
 	fclose(dev_random);
     dev_random=NULL;
     return seed;
@@ -136,7 +133,6 @@ void generate_shared_params(shared_params_t *params, unsigned n_bits, gmp_randst
 
     //p della forma 2*p'+1 con p' e p primi
     //q della forma 2*q'+1 con q' e q primi
-    
 
     do {
         do {
@@ -237,15 +233,17 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
     
     //testing
     mpz_mul(lamb_N, sk->p_1, sk->q_1);
+    mpz_set_ui(alpha,1);
     mpz_mul_ui(lamb_N, lamb_N, 2);
     do{
         
-        mpz_urandomm(alpha, prng, pk->N);
+        
+        //mpz_urandomm(alpha, prng, pk->N);
         pmesg_mpz(msg_very_verbose, "alpha =",alpha);
         mpz_urandomm(alpha2, prng, pk->N);
         mpz_mul(alpha2, alpha2, pk->N);
         pmesg_mpz(msg_very_verbose, "alpha2 =",alpha2);
-        mpz_add(alpha, alpha, alpha2);
+        mpz_add(alpha, alpha, alpha2);// 1+K*N
         
         //alpha^lamb_N=1 mod N, alpha^(N*lamb_N)=1 mod N^2
         mpz_powm(tmp, alpha, lamb_N, pk->N);
@@ -328,7 +326,6 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
         pk->id_hash=PRE_state->h_1;
     else
         pk->id_hash=PRE_state->h_2;
-    printf("   H (.) = %u\n", pk->id_hash);
     
     //weak secret
     printf("\nweak secret,");
@@ -359,14 +356,15 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                     pmesg_mpz(msg_very_verbose, "C-1 mod N^2 = ", test_a);
                     mpz_cdiv_q(test_a, test_a, pk->N); 
                 
-                    
-                            printf("\n");
-                            mpz_mod(test_1, wsk->a, pk->N);
+                    printf("\n");
+                    pmesg_mpz(msg_very_verbose, "(C-1 mod N^2)/N = a mod N computato = ", test_a);
                             
-                            pmesg_mpz(msg_very_verbose, "test_1 a mod N atteso= ", test_1);
+                            
+                            mpz_mod(test_1, wsk->a, pk->N);
+                            pmesg_mpz(msg_very_verbose, "a mod N atteso= ", test_1);
 
                 
-                            pmesg_mpz(msg_very_verbose, "test_a, a mod N computato = ", test_a);
+                            
                             
                             
                             mpz_add_ui(test_a, pk->N, 1);
@@ -382,7 +380,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                             
                             
     mpz_clears(alpha, tmp, tmp1, pp, qq, NULL);
-    exit(1);//terminazione
+    //exit(1);//terminazione
 }
 
 
@@ -475,7 +473,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext, const public_ke
     mpz_set_ui(t, mpz_sizeinbase(pk->NN,2)); //|N^2| is the bit-lenght of N^2
     mpz_add_ui(t, t, 512);
     //pmesg_mpz(msg_very_verbose, "t= ", t);
-    unsigned int t_exp=mpz_get_ui(t);
+    unsigned long int t_exp=mpz_get_ui(t);
     
     mpz_urandomb(t, prng, t_exp);
     
@@ -846,8 +844,8 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
         printf("ricevuto in input un ciphertext K di tipo K=(A, A', B, C, A_dot, B_dot, C_dot)...\n\n");
         printf("controllo idonieta' su K in corso...");
         
-        mpz_t tmp, cmt_m, hashd, cmt_sigma_dot, beta_dot_c, tmp_g2;
-        mpz_inits(tmp, cmt_m, hashd, cmt_sigma_dot, beta_dot_c, tmp_g2, NULL);
+        mpz_t tmp, computed_m, hashd, cmt_sigma_dot, beta_dot_c, tmp_g2;
+        mpz_inits(tmp, computed_m, hashd, cmt_sigma_dot, beta_dot_c, tmp_g2, NULL);
         
         if (wsk_){
                 printf("chiave input  per la decifrazione secret key weak\n\n");
@@ -1014,22 +1012,21 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
 
                 
                 char * srt_sig_computed=mpz_get_str(NULL, 10, cmt_sigma);
-                char * concat_h=cnt_string(srt_sig_computed, NULL, PRE_state->h_2);// decryptor
+                char * h2_sig=cnt_string(srt_sig_computed, NULL, PRE_state->h_2);// decryptor//
                 
-                mpz_set_str(tmp, concat_h, 10);
+                mpz_set_str(tmp, h2_sig, 10);
                 mpz_mod(tmp, tmp, pk->NN);
-                
+            
                 char * tmpsig_computed=mpz_get_str(NULL, 10, tmp);
-                uint8_t digest_h_2[SHA3_384_DIGEST_SIZE]={0};
+                uint8_t digest_hash_2[SHA3_384_DIGEST_SIZE]={0};
                 printf("\n H decryptor=( sigma_dot || beta_dot || id)\n");
                 perform_hashing_sha3(sha3_384_ctx, sha3_384_init, sha3_384_update,
-                                sha3_384_digest, SHA3_384_DIGEST_SIZE, tmpsig_computed, &tmpsig_computed[0], digest_h_2);
+                                sha3_384_digest, SHA3_384_DIGEST_SIZE, tmpsig_computed, &tmpsig_computed[0], digest_hash_2);
                 //get m
-                mpz_import(tmp, SHA3_384_DIGEST_SIZE,1,1,0,0, digest_h_2);
-                mpz_xor(cmt_m, K->info_cipher.K_2.C, tmp);
-                
-                
-                char *str_check_msg=mpz_get_str(NULL, 10, cmt_m);
+                mpz_import(tmp, SHA3_384_DIGEST_SIZE,1,1,0,0, digest_hash_2);
+                mpz_xor(computed_m, K->info_cipher.K_2.C, tmp);
+                                
+                char *str_check_msg=mpz_get_str(NULL, 10, computed_m);
                 char * concat_check=cnt_string(srt_sig_computed, str_check_msg, PRE_state->h_1);
                 mpz_set_str(tmp, concat_check, 10);
                 mpz_mod(tmp, tmp, pk->NN);
@@ -1057,26 +1054,27 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 if (mpz_cmp(tmpA, K->info_cipher.K_2.A)==0  && mpz_cmp(tmpB, K->info_cipher.K_2.B)==0) {
                     
                     printf("\nciphertext conforme, messaggio decifrato correttamente dal Proxy.\n");
-                    pmesg_mpz(msg_very_verbose, "message =", cmt_m);
+                    pmesg_mpz(msg_very_verbose, "message =", computed_m);
                 }
                 else _EXIT("[ X] errore in fase di decryption, paramertri corrotti");
                 printf("\n");
                 
                 free(srt_sig_computed);
-                free(concat_h);
+                free(h2_sig);
                 free(tmpsig_computed);
                 free(str_check_msg);
                 free(H_delegator);
                 free(concat_check);
                 srt_sig_computed=NULL;
-                concat_h=NULL;
+                h2_sig=NULL;
                 tmpsig_computed=NULL;
                 str_check_msg=NULL;
                 H_delegator=NULL;
                 concat_check=NULL;
                 
                 mpz_clears (tmp_c, check_H, tmpA, tmpB, cmt_sigma, NULL);
-            }
+            }//end check B
+            
             else {_EXIT("[ X]B_bot corrotto");}
             printf("\n");
             
@@ -1094,10 +1092,9 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             srt_beta_dot=NULL;
             tmpsigbeta_dot=NULL;
                        
-            mpz_clears(tmp, cmt_m, hashd, cmt_sigma_dot, beta_dot_c, tmp_g2, NULL);
+            mpz_clears(tmp, computed_m, hashd, cmt_sigma_dot, beta_dot_c, tmp_g2, NULL);
     }
 }
-
 
 
 /*
@@ -1131,7 +1128,7 @@ void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key,
     char *str_sigma_dot=mpz_get_str(NULL, 10, sigma_dot);
     char *str_beta_dot=mpz_get_str(NULL, 10, beta_dot);
     char * concat_hY=cnt_string(str_sigma_dot, str_beta_dot, pkY->id_hash);
-    printf(">>pkY->id_hash= %u\n\n", pkY->id_hash);
+    //printf(">>pkY->id_hash= %u\n\n", pkY->id_hash);
     
     
     mpz_set_str(tmp, concat_hY, 10);

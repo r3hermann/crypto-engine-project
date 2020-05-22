@@ -45,7 +45,7 @@ int main (int argc, char* argv[]){
     bool do_bench = false;
     
     gmp_randstate_t prng;
-    int p_bits=default_p_bits; //512
+    unsigned int p_bits=default_p_bits; //512
 
     msg_t wsk_msg, b_msg;
     plaintext_t plaintext_msg;
