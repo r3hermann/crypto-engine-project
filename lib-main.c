@@ -380,7 +380,7 @@ void generate_keys(public_key_t *pk, private_key_t *sk, weak_secret_key_t *wsk,
                             
                             
     mpz_clears(alpha, tmp, tmp1, pp, qq, NULL);
-    //exit(1);//terminazione
+    exit(1);//terminazione
 }
 
 
