@@ -57,7 +57,7 @@ typedef struct Delegator_struct delegator_key_t;
  */
 struct public_key_struct {
     
-    uint32_t id_hash;
+    unsigned long id_hash;
     mpz_t N;
     mpz_t g0;
     mpz_t g1;
@@ -121,9 +121,9 @@ typedef struct shared_params_struct shared_params_t;
  */
 struct PRE_scheme_state_struct {
     
-    uint16_t h_1;
-    uint16_t h_2;
-    uint16_t h_3;
+    unsigned long int h_1;
+    unsigned long int h_2;
+    unsigned long int h_3;
 };
 typedef struct PRE_scheme_state_struct state_t;
 
@@ -181,10 +181,9 @@ typedef struct info_type_ciphertext {
     
 }ciphertext_t;
 
-/*metodi*/
 
 //random seed
-long random_seed();
+long random_seed(void);
 
 //parametri condivisi
 void generate_shared_params(shared_params_t *params, unsigned int p_bits, gmp_randstate_t prng);
