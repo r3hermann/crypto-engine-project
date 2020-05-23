@@ -65,6 +65,7 @@ struct public_key_struct {
     mpz_t NN;
     delegator_key_t delegator;
 };
+
 typedef struct public_key_struct public_key_t;
 
 
