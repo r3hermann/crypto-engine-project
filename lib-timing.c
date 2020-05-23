@@ -1,5 +1,3 @@
-//20191029_111255_2.m4a
-
 /*
  *  Copyright 2016 Mario Di Raimondo <diraimondo@dmi.unict.it>
  *
@@ -344,7 +342,7 @@ void detect_clock_cycles_overhead() {
 elapsed_time_t get_timestamp_overhead() { return timestamp_timing_overhead; }
 
 /* rileva automaticamente l'overhead caratterizzante il metodo timestamp
- * preconfigurato [59.48]*/
+ * preconfigurato */
 void detect_timestamp_overhead() {
     stats_t stats;
     perform_timestamp_sampling(stats, NULL, calibration_loop, tu_nanos, {}, {});
