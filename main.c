@@ -232,7 +232,7 @@ int main (int argc, char* argv[]){
         });
     printf("cifratura ciphertext= (A, A', B, C, A_dot, B_dot, C_dot)\n");
     if (do_bench)
-          printf_et("cifratura del ciphertext K dal Proxy......: ", time, tu_sec,"\n");
+          printf_et("cifratura del ciphertext K dal Proxy......", time, tu_sec,"\n");
     
     //pk delegator
     *pk.delegator.g0=*pkX.g0;
@@ -250,7 +250,7 @@ int main (int argc, char* argv[]){
         },{});
     
     if (do_bench)
-          printf_short_stats("Decifratura del messaggio ricevuto dal Proxy....: ", timing, "");
+          printf_short_stats("Decifratura del messaggio ricevuto dal Proxy....", timing, "");
         
     
     printf("\n\nseconda decifratura ciphertext dal Procy\n");
@@ -262,7 +262,7 @@ int main (int argc, char* argv[]){
     },{});
     
     if (do_bench)
-        printf_short_stats("decifratura caso long term secret key con ciphertext dal Procy....: ",timing, "");
+        printf_short_stats("decifratura caso long term secret key con ciphertext dal Proxy....",timing, "");
     
     //clear
     msg_clear(&b_msg);
