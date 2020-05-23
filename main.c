@@ -24,8 +24,7 @@
 #include<errno.h>
 
 #define prng_sec_level 96
-#define default_p_bits 512 //safe-prime piccoli
-
+#define default_p_bits 512
 
 #define blocks_to_hash 5
 
@@ -66,7 +65,6 @@ int main (int argc, char* argv[]){
     ciphertext_t K;
     state_t PRE_state;
     
-    int exit_status=0;
     long prng_seed=random_seed();
     //printf("random_seed %ld\n",seed);
     
@@ -85,12 +83,11 @@ int main (int argc, char* argv[]){
              
         } else if (strcmp(argv[i], "message") == 0) {
             
-            
             if(i+1 >= argc) {
                 _EXIT("messaggio errato o mancante. ");
             }
             assert(argv[i+1]);
-            fixed_msg = atoi(argv[i+1]);
+            fixed_msg = (unsigned long)atoi(argv[i+1]);
             i++;
         }
         
@@ -102,20 +99,17 @@ int main (int argc, char* argv[]){
         }
     }
     
+    if (do_bench)
+        set_messaging_level(msg_silence);
+    
     printf("Calibrazione strumenti per il timing...\n");
     calibrate_clock_cycles_ratio();
     detect_clock_cycles_overhead();
     detect_timestamp_overhead();
     
-    if (do_bench){
-        set_messaging_level(msg_silence);
-    }
-    detect_clock_cycles_overhead();
-    detect_timestamp_overhead();
-    
-    
     printf("\nInizializzazione PRNG");
     gmp_randinit_default(prng);
+    gmp_randseed_os_rng(prng, prng_sec_level);
     
     /*
      * Set an initial seed value into state
@@ -139,7 +133,6 @@ int main (int argc, char* argv[]){
     if (do_bench)
         printf_et("generate_shared_params: ", time, tu_sec,"\n");
     
-    
     //generazione id
     PRE_scheme_state(&PRE_state, prng);
     
@@ -147,8 +140,7 @@ int main (int argc, char* argv[]){
     /*if(!verify_params(params)){
         _EXIT("controllo dei parametri e' fallito. ");
     }*/
-   
-    
+       
     //msg
     msg_init(&wsk_msg);
     
@@ -157,76 +149,133 @@ int main (int argc, char* argv[]){
     weak_secret_key_init(&wsk);
     
     printf("\n\nGenerazione parametri di Alice\n");
-    generate_keys(&pk, &sk, &wsk, &params, prng, &PRE_state, &wsk_msg, "weaka","alice");
-    pkX=pk;
-    //printf("------->address pkX %p\n", &pkX);
+    perform_clock_cycles_sampling_period(
+        timing, applied_sampling_time, max_samples, tu_millis,
+        {generate_keys(&pk, &sk, &wsk, &params, prng, &PRE_state, &wsk_msg, "weaka","alice");},{});
+    if (do_bench)
+         printf_short_stats("Generazione parametri di Alice: ", timing, "");
     
+    pkX=pk;    
     ciphertext_init(&K);
     plaintext_init(&plaintext_msg);
     
     if (fixed_msg > 0) {
-        mpz_set_ui(plaintext_msg.m, fixed_msg);
+        mpz_set_ui(plaintext_msg.m, (unsigned long int)fixed_msg);
     }
     else { //random msg
         if (fixed_msg < 0)
-            mpz_sub_ui(plaintext_msg.m, params.N, labs(fixed_msg));
+            mpz_sub_ui(plaintext_msg.m, params.N, (unsigned long int)labs(fixed_msg));
         else
             mpz_urandomm(plaintext_msg.m, prng, params.N);
     }
-    
+
     printf("\n\nCifratura plaintext...\n");
     perform_clock_cycles_sampling_period(
-        timing, applied_sampling_time, max_samples, tu_millis,{
-            encrypt(prng, &plaintext_msg, &pk, &K, &PRE_state); },{});
-     if (do_bench)
-            printf_short_stats(" Cifratura", timing, "");
-            
-    printf("\nDecifratura del messaggio ricevuto...\n");
-    perform_clock_cycles_sampling_period(
-        timing, applied_sampling_time, max_samples, tu_millis,{
-            decryption(&K, &pk, &PRE_state, &wsk_msg, &sk, prng); },{});
+        timing, applied_sampling_time, max_samples, tu_millis,
+        {encrypt(prng, &plaintext_msg, &pk, &K, &PRE_state);},{});
+        printf("\nciphertext generato di tipo K=(A, B, D, c, s)\n\n");
     if (do_bench)
-            printf_short_stats(" Decifratura", timing, "");
+        printf_short_stats(" Cifratura plaintext...", timing, "");
+    
+    
+    printf("\nDecifratura del messaggio ricevuto...\n");
+    printf("ricevuto in input un ciphertext K di tipo K=(A, B, D, c, s)...\n");
+    printf("controllo idonieta' su K in corso...\n");
+    printf("chiave input  per la decifrazione secret key weak\n\n");
 
-    //printf("\n\nseconda decifratura\n");
-    //decryption(&K, &pk, &PRE_state, NULL, &sk, prng); 
+    perform_clock_cycles_sampling_period(
+                timing, applied_sampling_time, max_samples, tu_millis,{
+                    decryption(&K, &pk, &PRE_state, &wsk_msg, &sk, prng);},{});
+    if (do_bench)
+        printf_short_stats("Decifratura del messaggio ricevuto... ", timing, "");
+    
+    
+    printf("\n\nseconda decifratura, caso secret key long term secret key\n");
+    printf("controllo idonieta' su K in corso...\n");
+    printf("chiave input  per la decifrazione long term secret key\n\n");
+
+    perform_clock_cycles_sampling_period(
+                timing, applied_sampling_time, max_samples, tu_millis,{
+            decryption(&K, &pk, &PRE_state, NULL, &sk, prng);},{});
+    if (do_bench)
+        printf_short_stats("seconda decifratura, caso long term secret key....", timing, "");
     
     public_key_init(&pk);
     msg_init(&b_msg);
+    
     printf("\n\nGenerazione parametri di Bob\n");
-    generate_keys(&pk, &sk, &wsk, &params, prng, &PRE_state, &b_msg, "weekb", "bob");
+    perform_oneshot_clock_cycles_sampling(time, tu_millis,{
+        generate_keys(&pk, &sk, &wsk, &params, prng, &PRE_state, &b_msg, "weekb", "bob");
+    });
+    if (do_bench)
+        printf_et("Generazione parametri di Bob...: ", time, tu_sec,"\n");
     
     printf("\navvio richiesta di re_encryption...\n");
-    printf("ReKeygen dal Proxy in corso...\n");
-    RekeyGen(prng, &RE_enc_key, &PRE_state, &pk, &sk, &wsk_msg); //pk bob
     
-    printf("\ncifratura del ciphertext K dal Proxy...\n");
-    mpz_init(K.info_cipher.K_2.C_dot);//
-    ReEncrypt(&K, &RE_enc_key, &PRE_state, &pkX); //re-enc cipher under alices pk
+    printf("ReKeygen dal Proxy in corso...\n");
+    perform_clock_cycles_sampling_period(
+        timing, applied_sampling_time, max_samples, tu_millis,{
+            RekeyGen(prng, &RE_enc_key, &PRE_state, &pk, &sk, &wsk_msg); //pk bob
+            },{});
+    printf("\nrk1_X -> Y= (A_dot, B_dot, C_dot)\n");
+    printf("output re-KeyGen: undirectional re-encryption key rkX -> Y = (rk1_X -> Y, rk2_X -> Y)\n\n");
+    if (do_bench)
+        printf_short_stats("ReKeygen Proxy......", timing, "");
+    
+    printf("\navvio cifratura del ciphertext K dal Proxy...\n");
+    printf("controllo del ciphertext K ricevuto in input in corso...\n");
+    printf("ricevuto in input un ciphertext K di tipo K=(A, A', B, C, A_dot, B_dot, C_dot)...\n");
+    ciphertext_RE_init(&K);
+    perform_oneshot_clock_cycles_sampling(time, tu_millis,{
+            //mpz_init(K.info_cipher.K_2.C_dot);
+            ReEncrypt(&K, &RE_enc_key, &PRE_state, &pkX); //re-enc cipher under alices pk
+        });
+    printf("cifratura ciphertext= (A, A', B, C, A_dot, B_dot, C_dot)\n");
+    if (do_bench)
+          printf_et("cifratura del ciphertext K dal Proxy......: ", time, tu_sec,"\n");
     
     //pk delegator
     *pk.delegator.g0=*pkX.g0;
     *pk.delegator.g1=*pkX.g1;
     *pk.delegator.N=*pkX.N;
     *pk.delegator.NN=*pkX.NN;
-    printf("\n\nDecifratura del messaggio ricevuto dal Proxy...\n");
-    decryption(&K, &pk, &PRE_state, &b_msg, &sk, prng); //dec bob
     
-    //printf("\n\ndecifratura ciphertext dal Procy\n");
-    //decryption(&K, &pk, &PRE_state, NULL, &sk, prng); 
+    printf("\n\nDecifratura del messaggio ricevuto dal Proxy...\n");
+    printf("controllo idonieta' su K in corso...\n");
+    printf("chiave input  per la decifrazione secret key weak\n\n");
+        
+    perform_clock_cycles_sampling_period(
+        timing, applied_sampling_time, max_samples, tu_millis,{
+            decryption(&K, &pk, &PRE_state, &b_msg, &sk, prng); //dec bob
+        },{});
+    
+    if (do_bench)
+          printf_short_stats("Decifratura del messaggio ricevuto dal Proxy....: ", timing, "");
+        
+    
+    printf("\n\nseconda decifratura ciphertext dal Procy\n");
+    printf("chiave input  per la decifrazione long term secret key\n");
+    printf("controllo idonieta' su K in corso...\n");
+    perform_clock_cycles_sampling_period(
+        timing, applied_sampling_time, max_samples, tu_millis,{
+            decryption(&K, &pk, &PRE_state, NULL, &sk, prng);
+    },{});
+    
+    if (do_bench)
+        printf_short_stats("decifratura caso long term secret key con ciphertext dal Procy....: ",timing, "");
     
     //clear
     msg_clear(&b_msg);
     msg_clear(&wsk_msg);
     
     private_key_clear(&sk);
-    public_key_clear(&pkX); //
+    public_key_clear(&pkX);
     public_key_clear(&pk);
     weak_secret_key_clear(&wsk);
     plaintext_clear(&plaintext_msg);
     ciphertextK2_clear(&K);
-    ReKeyGen_keys_clear(&RE_enc_key); //
+    ReKeyGen_keys_clear(&RE_enc_key);
     gmp_randclear(prng);
     shared_params_clear(&params);
-    exit(exit_status);
+    exit(EXIT_SUCCESS 	);
 }
