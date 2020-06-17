@@ -24,7 +24,7 @@
 #include<errno.h>
 
 #define prng_sec_level 96
-#define default_p_bits 512
+#define default_pq_bits 512
 
 #define blocks_to_hash 5
 
@@ -44,7 +44,7 @@ int main (int argc, char* argv[]){
     bool do_bench = false;
     
     gmp_randstate_t prng;
-    unsigned int p_bits=default_p_bits; //512
+    unsigned int pq_bits=default_pq_bits; //512
 
     msg_t wsk_msg, b_msg;
     plaintext_t plaintext_msg;
@@ -126,9 +126,9 @@ int main (int argc, char* argv[]){
     shared_params_init(&params);
     
     //get N=p*q
-    printf("\nGenerazione dei parametri comuni. Gruppo di ordine %d bit...\n",p_bits);
+    printf("\nGenerazione dei parametri comuni. Gruppo di ordine %d bit...\n",pq_bits);
     perform_oneshot_timestamp_sampling(time, tu_sec, {
-        generate_shared_params(&params, p_bits, prng);
+        generate_shared_params(&params, pq_bits, prng);
         });
     if (do_bench)
         printf_et("generate_shared_params: ", time, tu_sec,"\n");
@@ -144,6 +144,7 @@ int main (int argc, char* argv[]){
     //msg
     msg_init(&wsk_msg);
     
+    //init keys
     public_key_init(&pk);
     private_key_init(&sk);
     weak_secret_key_init(&wsk);
@@ -176,8 +177,7 @@ int main (int argc, char* argv[]){
         printf("\nciphertext generato di tipo K=(A, B, D, c, s)\n\n");
     if (do_bench)
         printf_short_stats(" Cifratura plaintext...", timing, "");
-    
-    
+        
     printf("\nDecifratura del messaggio ricevuto...\n");
     printf("ricevuto in input un ciphertext K di tipo K=(A, B, D, c, s)...\n");
     printf("controllo idonieta' su K in corso...\n");
@@ -188,8 +188,7 @@ int main (int argc, char* argv[]){
                     decryption(&K, &pk, &PRE_state, &wsk_msg, &sk, prng);},{});
     if (do_bench)
         printf_short_stats("Decifratura del messaggio ricevuto... ", timing, "");
-    
-    
+        
     printf("\n\nseconda decifratura, caso secret key long term secret key\n");
     printf("controllo idonieta' su K in corso...\n");
     printf("chiave input  per la decifrazione long term secret key\n\n");
@@ -202,7 +201,6 @@ int main (int argc, char* argv[]){
     
     public_key_init(&pk);
     msg_init(&b_msg);
-    
     printf("\n\nGenerazione parametri di Bob\n");
     perform_oneshot_clock_cycles_sampling(time, tu_millis,{
         generate_keys(&pk, &sk, &wsk, &params, prng, &PRE_state, &b_msg, "weekb", "bob");
@@ -211,7 +209,6 @@ int main (int argc, char* argv[]){
         printf_et("Generazione parametri di Bob...: ", time, tu_sec,"\n");
     
     printf("\navvio richiesta di re_encryption...\n");
-    
     printf("ReKeygen dal Proxy in corso...\n");
     perform_clock_cycles_sampling_period(
         timing, applied_sampling_time, max_samples, tu_millis,{
@@ -251,7 +248,6 @@ int main (int argc, char* argv[]){
     
     if (do_bench)
           printf_short_stats("Decifratura del messaggio ricevuto dal Proxy....", timing, "");
-        
     
     printf("\n\nseconda decifratura ciphertext dal Procy\n");
     printf("chiave input  per la decifrazione long term secret key\n");
@@ -267,7 +263,6 @@ int main (int argc, char* argv[]){
     //clear
     msg_clear(&b_msg);
     msg_clear(&wsk_msg);
-    
     private_key_clear(&sk);
     public_key_clear(&pkX);
     public_key_clear(&pk);
