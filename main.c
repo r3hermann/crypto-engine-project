@@ -25,10 +25,6 @@
 #include<errno.h>
 
 #define prng_sec_level 96
-#define default_p_bits 512
-#define default_q_bits 512
-
-#define blocks_to_hash 5
 
 #define bench_sampling_time 5 /* secondi */
 #define max_samples (bench_sampling_time * 1000)
@@ -51,8 +47,8 @@ int main (int argc, char* argv[]){
 
     plaintext_t plaintext_msg;
 
-    //shared params N
-    shared_params_t params;
+    //KeyGen params N
+    keygen_params_t params;
     
     //pk keys
     public_key_t pk, pkX;
@@ -126,16 +122,9 @@ int main (int argc, char* argv[]){
         gmp_randseed_os_rng(prng, prng_sec_level);
     }
     
-    shared_params_init(&params);
+    keygen_params_init(&params);
     
-    /*printf("\nGenerazione dei parametri comuni. Gruppo di ordine %d bit...\n",pq_bits);
-    perform_oneshot_timestamp_sampling(time, tu_sec, {
-        generate_shared_params(&params, pq_bits, prng);
-        });
-    if (do_bench)
-        printf_et("generate_shared_params: ", time, tu_sec,"\n");*/
-    
-    //generazione id
+    //id gen
     PRE_scheme_state(&PRE_state, prng);
     
     //check sui parametri
@@ -165,10 +154,12 @@ int main (int argc, char* argv[]){
         mpz_set_ui(plaintext_msg.m, (unsigned long int)fixed_msg);
     }
     else { //random msg
-        if (fixed_msg < 0)
-            mpz_sub_ui(plaintext_msg.m, params.N, (unsigned long int)labs(fixed_msg));
+        if (fixed_msg < 0) {
+            unsigned long sub=n_sec_parameter_H2_hash_functions-((unsigned long int)labs(fixed_msg));
+            mpz_set_ui(plaintext_msg.m, sub);
+        }
         else
-            mpz_urandomm(plaintext_msg.m, prng, params.N);
+            mpz_urandomb(plaintext_msg.m, prng, n_sec_parameter_H2_hash_functions);
     }
 
     printf("\n\nCifratura plaintext...\n");
@@ -215,6 +206,8 @@ int main (int argc, char* argv[]){
     
     printf("\navvio richiesta di re_encryption...\n");
     printf("avvio procedura ReKeygen dal Proxy in corso...\n");
+    ReKeyGen_keys_init(&RE_enc_key);//P2
+    
     perform_clock_cycles_sampling_period(
         timing, applied_sampling_time, max_samples, tu_millis,{
             RekeyGen(prng, &RE_enc_key, &PRE_state, &pk, &skX, &wskX); //pk bob
@@ -267,6 +260,7 @@ int main (int argc, char* argv[]){
         printf_short_stats("decifratura caso long term secret key con ciphertext dal Proxy....",timing, "");
     
     //clear
+    private_key_clear(&skX);
     weak_secret_key_clear(&wskX);
     private_key_clear(&sk);
     public_key_clear(&pkX);//P2
@@ -277,6 +271,6 @@ int main (int argc, char* argv[]){
     //ciphertextK1_clear(&K);//test
     ReKeyGen_keys_clear(&RE_enc_key);//P2
     gmp_randclear(prng);
-    shared_params_clear(&params);
+    keygen_params_clear(&params);
     exit(EXIT_SUCCESS 	);
 }
