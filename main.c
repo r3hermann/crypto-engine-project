@@ -67,6 +67,10 @@ int main (int argc, char* argv[]){
     long prng_seed=random_seed();
     //printf("random_seed %ld\n",seed);
     
+
+    extern struct sha3_512_ctx static_context_512;
+    sha3_512_init(&static_context_512);
+    
     if (argv[1] == NULL) {
         printf("esecuzione minimale...\n\n");
     }
@@ -126,12 +130,7 @@ int main (int argc, char* argv[]){
     
     //id gen
     PRE_scheme_state(&PRE_state, prng);
-    
-    //check sui parametri
-    /*if(!verify_params(params)){
-        _EXIT("controllo dei parametri e' fallito. ");
-    }*/
-    
+        
     //init keys
     public_key_init(&pk);
     private_key_init(&sk);
@@ -169,8 +168,8 @@ int main (int argc, char* argv[]){
         printf("\nciphertext generato di tipo K=(A, B, D, c, s)\n\n");
     if (do_bench)
         printf_short_stats(" Cifratura plaintext...", timing, "");
-        
-    printf("\nDecifratura del messaggio ricevuto...\n");
+
+   printf("\nDecifratura del messaggio ricevuto...\n");
     printf("ricevuto in input un ciphertext K di tipo K=(A, B, D, c, s)...\n");
     printf("controllo idonieta' su K in corso...\n");
     printf("chiave input  per la decifrazione secret key weak\n\n");
@@ -181,7 +180,8 @@ int main (int argc, char* argv[]){
     if (do_bench)
         printf_short_stats("Decifratura del messaggio ricevuto... ", timing, "");
         
-    printf("   decifratura avvenuta correttamente...\n");
+    printf("   decifratura avvenuta correttamente...\n");*/
+
     
     printf("\n\nseconda decifratura, caso secret key long term secret key\n");
     printf("controllo idonieta' su K in corso...\n");
@@ -257,11 +257,11 @@ int main (int argc, char* argv[]){
     },{});
     
     if (do_bench)
-        printf_short_stats("decifratura caso long term secret key con ciphertext dal Proxy....",timing, "");
+        printf_short_stats("decifratura caso long term secret key con ciphertext dal Proxy....",timing, "");*/
     
     //clear
-    private_key_clear(&skX);
-    weak_secret_key_clear(&wskX);
+    private_key_clear(&skX);//P2
+    weak_secret_key_clear(&wskX);//P2
     private_key_clear(&sk);
     public_key_clear(&pkX);//P2
     public_key_clear(&pk);
@@ -271,6 +271,8 @@ int main (int argc, char* argv[]){
     //ciphertextK1_clear(&K);//test
     ReKeyGen_keys_clear(&RE_enc_key);//P2
     gmp_randclear(prng);
+    free(dump_sigma);
+    free(dump_msg);
     keygen_params_clear(&params);
-    exit(EXIT_SUCCESS 	);
+    exit(EXIT_SUCCESS);
 }
