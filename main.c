@@ -180,7 +180,7 @@ int main (int argc, char* argv[]){
     if (do_bench)
         printf_short_stats("Decifratura del messaggio ricevuto... ", timing, "");
         
-    printf("   decifratura avvenuta correttamente...\n");*/
+    printf("   decifratura avvenuta correttamente...\n");
 
     
     printf("\n\nseconda decifratura, caso secret key long term secret key\n");
@@ -257,7 +257,7 @@ int main (int argc, char* argv[]){
     },{});
     
     if (do_bench)
-        printf_short_stats("decifratura caso long term secret key con ciphertext dal Proxy....",timing, "");*/
+        printf_short_stats("decifratura caso long term secret key con ciphertext dal Proxy....",timing, "");
     
     //clear
     private_key_clear(&skX);//P2
