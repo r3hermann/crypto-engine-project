@@ -243,23 +243,23 @@ typedef struct stats_struct stats_t[1];
     fprintf_short_stats(stdout, NAME, STATS, SUFFIX)
 
 void get_timestamp(timestamp_t ts);
-elapsed_time_t get_timestamp_resolution();
+elapsed_time_t get_timestamp_resolution(void);
 elapsed_time_t get_elapsed_time_from_timestamp(timestamp_t before,
                                                timestamp_t after);
-clock_cycles_t rdtsc();
-clock_cycles_t cpuid_rdtsc();
-clock_cycles_t rdtscp();
-clock_cycles_t rdtscp_cpuid();
-extern clock_cycles_t (*get_clock_cycles_before)();
-extern clock_cycles_t (*get_clock_cycles_after)();
+clock_cycles_t rdtsc(void);
+clock_cycles_t cpuid_rdtsc(void);
+clock_cycles_t rdtscp(void);
+clock_cycles_t rdtscp_cpuid(void);
+extern clock_cycles_t (*get_clock_cycles_before)(void);
+extern clock_cycles_t (*get_clock_cycles_after)(void);
 void set_stats_kernel_cuts(float lower, float upper);
 void set_clock_cycles_per_ns(double ratio);
-elapsed_time_t get_clock_cycles_per_ns();
-void calibrate_clock_cycles_ratio();
-elapsed_time_t get_clock_cycles_overhead();
-void detect_clock_cycles_overhead();
-elapsed_time_t get_timestamp_overhead();
-void detect_timestamp_overhead();
+elapsed_time_t get_clock_cycles_per_ns(void);
+void calibrate_clock_cycles_ratio(void);
+elapsed_time_t get_clock_cycles_overhead(void);
+void detect_clock_cycles_overhead(void);
+elapsed_time_t get_timestamp_overhead(void);
+void detect_timestamp_overhead(void);
 elapsed_time_t get_elapsed_time_from_cpu_cycles(clock_cycles_t before,
                                                 clock_cycles_t after);
 elapsed_time_t et_to(const elapsed_time_t ns, enum time_unit unit);
