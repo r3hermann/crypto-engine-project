@@ -182,7 +182,6 @@ int main (int argc, char* argv[]){
         
     printf("   decifratura avvenuta correttamente...\n");
 
-    
     printf("\n\nseconda decifratura, caso secret key long term secret key\n");
     printf("controllo idonieta' su K in corso...\n");
     printf("chiave input  per la decifrazione long term secret key\n\n");
@@ -233,6 +232,7 @@ int main (int argc, char* argv[]){
     //pk delegator
     *pk.delegator.g0=*pkX.g0;
     *pk.delegator.g1=*pkX.g1;
+    pk.delegator.id_hash=pkX.id_hash;
     *pk.delegator.N=*pkX.N;
     *pk.delegator.NN=*pkX.NN;
     
