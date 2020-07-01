@@ -229,17 +229,13 @@ int main (int argc, char* argv[]){
     if (do_bench)
           printf_et("cifratura del ciphertext K dal Proxy......", time, tu_sec,"\n");
     
-    //pk delegator
-    *pk.delegator.g0=*pkX.g0;
-    *pk.delegator.g1=*pkX.g1;
-    pk.delegator.id_hash=pkX.id_hash;
-    *pk.delegator.N=*pkX.N;
-    *pk.delegator.NN=*pkX.NN;
+    // pk delegator
+    pk.delegator=&pkX;
     
     printf("\n\nDecifratura del messaggio ricevuto dal Proxy...\n");
     printf("controllo idonieta' su K in corso...\n");
     printf("chiave input  per la decifrazione secret key weak\n\n");
-        
+    
     perform_clock_cycles_sampling_period(
         timing, applied_sampling_time, max_samples, tu_millis,{
             decryption(&K, &pk, &PRE_state, &wsk, &sk, prng); //bob decryption
@@ -247,7 +243,7 @@ int main (int argc, char* argv[]){
     
     if (do_bench)
           printf_short_stats("Decifratura del messaggio ricevuto dal Proxy....", timing, "");
-    
+
     printf("\n\nseconda decifratura ciphertext dal Procy\n");
     printf("chiave input  per la decifrazione long term secret key\n");
     printf("controllo idonieta' su K in corso...\n");
@@ -258,7 +254,7 @@ int main (int argc, char* argv[]){
     
     if (do_bench)
         printf_short_stats("decifratura caso long term secret key con ciphertext dal Proxy....",timing, "");
-    
+
     //clear
     private_key_clear(&skX);//P2
     weak_secret_key_clear(&wskX);//P2
