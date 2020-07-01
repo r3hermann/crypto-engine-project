@@ -96,7 +96,7 @@ void __pmesg_element(msg_level_t level, const char *name, const char *var_name,
 #endif
 
 void set_messaging_level(msg_level_t l);
-msg_level_t get_messaging_level();
+msg_level_t get_messaging_level(void);
 
 #if defined(PMESG_DEFAULT_PLAIN_SUPPORT)
 #define pmesg plain_pmesg
