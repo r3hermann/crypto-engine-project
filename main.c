@@ -269,6 +269,10 @@ int main (int argc, char* argv[]){
     gmp_randclear(prng);
     free(dump_sigma);
     free(dump_msg);
+    free(dump_beta_dot);
+    dump_sigma=NULL;
+    dump_msg=NULL;
+    dump_beta_dot=NULL;
     keygen_params_clear(&params);
     exit(EXIT_SUCCESS);
 }
