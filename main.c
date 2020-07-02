@@ -267,12 +267,6 @@ int main (int argc, char* argv[]){
     //ciphertextK1_clear(&K);//test
     ReKeyGen_keys_clear(&RE_enc_key);//P2
     gmp_randclear(prng);
-    free(dump_sigma);
-    free(dump_msg);
-    free(dump_beta_dot);
-    dump_sigma=NULL;
-    dump_msg=NULL;
-    dump_beta_dot=NULL;
     keygen_params_clear(&params);
     exit(EXIT_SUCCESS);
 }
