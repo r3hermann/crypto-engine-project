@@ -10,6 +10,10 @@
 #include <nettle/sha1.h>
 #include <nettle/sha3.h>
 
+#define sampling_time 5 /* secondi */
+#define max_samplessha3 (sampling_time * 200)
+
+
 #define mr_iterations 15
 #define BYTEREAD sizeof(char)*4
 
@@ -39,34 +43,43 @@
 })*/
 
 #define  perform_hashing_sha3_generic(FNC_UPDATE, FNC_DIGEST, DGST_SIZE, BLOCK2HASH,               \
-                                                                BYTE2WRITE, DIGESTSXXX)({                                                       \
+                                                                BYTE2WRITE, DIGESTSXXX, DGST_OUTPUT )({                              \
+    char buffer[2048]={0};                                                                                                                              \
     size_t bit=0,offset_dgst=0;                                                                                                                        \
-    uint8_t *sha3_tmp=malloc(sizeof(uint8_t)*bytesize+1);                                                                           \
-    uint8_t digest[SHA3_512_DIGEST_SIZE]={0};                                                                                            \
-                                                                                                                                                                        \
-    for(size_t i=0; i<=SIZE_BUFFER; i+=SIZE_BUFFER){                                                                                  \
-        memcpy(sha3_tmp, share_buffer, bytesize*sizeof(uint8_t));                                                                  \
-        memcpy(sha3_tmp+bytesize, &bit, sizeof(uint8_t));                                                                                \
+    uint8_t *sha3_tmp=malloc(sizeof(uint8_t)*BYTE2WRITE+1);                                                                     \
+    uint8_t digest[SHA3_512_DIGEST_SIZE]={0};                                                                                             \
                                                                                                                                                                           \
-        sha3_512_update(&static_context_512, bytesize+1, sha3_tmp);                                                              \
-        sha3_512_digest(&static_context_512, SHA3_512_DIGEST_SIZE, digest);                                                 \
-                                                                                                                                                                          \
+    for(size_t i=0; i<=SIZE_BUFFER; i+=SIZE_BUFFER){                                                                                   \
+        memcpy(sha3_tmp, share_buffer, BYTE2WRITE*sizeof(uint8_t));                                                              \
+        memcpy(sha3_tmp+BYTE2WRITE, &bit, sizeof(uint8_t));                                                                          \
+                                                                                                                                                                           \
+        FNC_UPDATE(&static_context_512, BYTE2WRITE+1, sha3_tmp);                                                             \
+        FNC_DIGEST(&static_context_512, SHA3_512_DIGEST_SIZE, digest);                                                        \
+                                                                                                                                                                           \
         memcpy(DIGESTSXXX+offset_dgst, digest, SHA3_512_DIGEST_SIZE);                                                     \
         offset_dgst+=SHA3_512_DIGEST_SIZE;                                                                                                    \
         bit++;                                                                                                                                                        \
-        printf("\n\n");                                                                                                                                              \
+                                                                                                                                                                           \
     }                                                                                                                                                                      \
+    snprintf(buffer, sizeof(buffer), "digest (%d bit)", DGST_OUTPUT );                                                                 \
+    pmesg_hex(msg_verbose, buffer, DGST_OUTPUT/8, DIGESTSXXX);                                                                \
     free(sha3_tmp);                                                                                                                                               \
                                                                                                                                                                             \
 })
 
 //display_hex(128, DIGESTSXXX);
-#define  perform_hashing_sha3_512(FNC_UPDATE, FNC_DIGEST, DGST_SIZE, BLOCK2HASH, LEN, DIGESTSXXX)({   \
+#define  perform_hashing_sha3_512(FNC_UPDATE, FNC_DIGEST, DGST_SIZE, BLOCK2HASH, LEN, DIGESTSXXX,       \
+                                                            DGST_OUTPUT )({                                                                                              \
     char buffer[2048]={0};                                                                                                                                            \
-    FNC_UPDATE(&static_context_512, LEN, BLOCK2HASH);                                                                                          \
-    FNC_DIGEST(&static_context_512, DGST_SIZE, DIGESTSXXX);                                                                                  \
-    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                                  \
-    printf("\n");                                                                                                                                                                 \
+    stats_t timing;                                                                                                                                                          \
+    perform_timestamp_sampling_period( timing, sampling_time, max_samplessha3, tu_millis,                                     \
+    {                                                                                                                                                                                   \
+        FNC_UPDATE(&static_context_512, LEN, BLOCK2HASH);                                                                                          \
+        FNC_DIGEST(&static_context_512, DGST_SIZE, DIGESTSXXX);                                                                                  \
+    },                                                                                                                                                                              \
+        {});                                                                                                                                                                    \
+    snprintf(buffer, sizeof(buffer), "digest (%d bit)", DGST_OUTPUT* 8);                                                                         \
+    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                             \
 })
 
 
