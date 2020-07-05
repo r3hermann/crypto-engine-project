@@ -2,7 +2,9 @@
 #define LIB_main_H
 
 #include "lib-mesg.h"
+#include "lib-timing.h"
 #include <assert.h>
+#include <libgen.h>
 #include <gmp.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -70,16 +72,20 @@
 //display_hex(128, DIGESTSXXX);
 #define  perform_hashing_sha3_512(FNC_UPDATE, FNC_DIGEST, DGST_SIZE, BLOCK2HASH, LEN, DIGESTSXXX,       \
                                                             DGST_OUTPUT )({                                                                                              \
-    char buffer[2048]={0};                                                                                                                                            \
-    stats_t timing;                                                                                                                                                          \
-    perform_timestamp_sampling_period( timing, sampling_time, max_samplessha3, tu_millis,                                     \
-    {                                                                                                                                                                                   \
-        FNC_UPDATE(&static_context_512, LEN, BLOCK2HASH);                                                                                          \
-        FNC_DIGEST(&static_context_512, DGST_SIZE, DIGESTSXXX);                                                                                  \
-    },                                                                                                                                                                              \
-        {});                                                                                                                                                                    \
+    char buffer[2048]={0};                                                                                                                                             \
+    stats_t timing;                                                                                                                                                             \
+    size_t block_size=LEN;                                                                                                                                               \
+    perform_timestamp_sampling_period( timing, sampling_time, max_samplessha3, tu_millis,                                    \
+    {                                                                                                                                                                                 \
+        FNC_UPDATE(&static_context_512, LEN, BLOCK2HASH);                                                                                        \
+        FNC_DIGEST(&static_context_512, DGST_SIZE, DIGESTSXXX);                                                                                \
+    },                                                                                                                                                                                  \
+        {});                                                                                                                                                                          \
     snprintf(buffer, sizeof(buffer), "digest (%d bit)", DGST_OUTPUT* 8);                                                                         \
-    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                             \
+    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                                     \
+    snprintf(buffer, sizeof(buffer), "tempo per %.2f MiB", (float)(LEN * 1 / (1 << 20)));                                                   \
+            pmesg_stats(msg_verbose, buffer, timing);                                                                                                        \
+    pmesg(msg_normal, "throughput hash: %.3f MiB/s", ((double)block_size * 1 / timing->median) * 1e3/(1 << 20));   \
 })
 
 
