@@ -14,7 +14,6 @@
 #include"lib-main.h"
 #include "lib-mesg.h"
 #include "lib-misc.h"
-#include "lib-timing.h"
 #include <gmp.h>
 #include <libgen.h>
 #include <stdbool.h>
