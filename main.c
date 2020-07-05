@@ -153,11 +153,11 @@ int main (int argc, char* argv[]){
     }
     else { //random msg
         if (fixed_msg < 0) {
-            unsigned long sub=n_sec_parameter_H2_hash_functions-((unsigned long int)labs(fixed_msg));
+            unsigned long sub=n_msg_length-((unsigned long int)labs(fixed_msg));
             mpz_set_ui(plaintext_msg.m, sub);
         }
         else
-            mpz_urandomb(plaintext_msg.m, prng, n_sec_parameter_H2_hash_functions);
+            mpz_urandomb(plaintext_msg.m, prng, n_msg_length);
     }
 
     printf("\n\nCifratura plaintext...\n");
@@ -263,7 +263,6 @@ int main (int argc, char* argv[]){
     weak_secret_key_clear(&wsk);
     plaintext_clear(&plaintext_msg);
     ciphertextK2_clear(&K);
-    //ciphertextK1_clear(&K);//test
     ReKeyGen_keys_clear(&RE_enc_key);//P2
     gmp_randclear(prng);
     keygen_params_clear(&params);
