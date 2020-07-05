@@ -19,7 +19,6 @@
 #define mr_iterations 15
 #define BYTEREAD sizeof(char)*4
 
-#define MB(x)   ((size_t) (x) << 20)
 
 //module input N=p*q, (p,q safe-prime)
 #define default_p_bits 512
