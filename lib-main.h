@@ -29,22 +29,7 @@
 
 #define _EXIT(string)({fprintf(stderr,"%s %s, line %d.\n", string, __FILE__, __LINE__);exit(EXIT_FAILURE);})
 
-/*
-#define  perform_hashing_sha3(STRUCT_CTX, FNC_INIT, FNC_UPDATE, FNC_DIGEST, DGST_SIZE, STR, STRLEN, DIGESTSXXX)({ \
-    struct STRUCT_CTX context;                                                                           \
-    FNC_INIT(&context);                                                                                        \
-    char buffer[2048]={0};                                                                                   \
-    size_t block_size=strlen(STRLEN);                                                                        \
-    uint8_t block_to_hash[block_size];                                                                   \
-    for(size_t i=0; i<block_size;i++){                                                          \
-                                                        \
-        block_to_hash[i]=(uint8_t)STR[i];                                                                  \
-    }                                                                                                                       \
-    FNC_UPDATE(&context, block_size, block_to_hash);                                        \
-    FNC_DIGEST(&context, DGST_SIZE, DIGESTSXXX);                                           \
-    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                            \
-    printf("originale\n\n");\
-})*/
+
 
 #define  perform_hashing_sha3_generic(FNC_UPDATE, FNC_DIGEST, DGST_SIZE, BLOCK2HASH,               \
                                                                 BLOCKSIZE, DIGESTSXXX, DGST_OUTPUT )({                                \
@@ -274,7 +259,6 @@ long random_seed(void);
 //init
 void keygen_params_init(keygen_params_t *params);
 void state_init(state_t state);
-//void msg_init(msg_t *msg);
 void plaintext_init(plaintext_t *plaintext);
 void ciphertext_init(ciphertext_t *K);
 void public_key_init(public_key_t *pk);
@@ -306,18 +290,18 @@ void generate_keys(keygen_params_t *params, unsigned p_bits, unsigned q_bits, pu
 void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key, const state_t *PRE_state,
                             const public_key_t *pkY, const private_key_t *skX, weak_secret_key_t *wskX);
 
-//
+//schema state
 void PRE_scheme_state (state_t *PRE_state, gmp_randstate_t prng);
 
 //encrypt
 void encrypt(gmp_randstate_t prng, const plaintext_t *msg,  const public_key_t *pk,
                         ciphertext_t *K, const state_t *PRE_state);
 
-//
+//re-encryption
 void ReEncrypt(ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const state_t *PRE_state,
                             const public_key_t *pkX);
 
-//
+//decryption
 void decryption(const ciphertext_t *K, const public_key_t *pk,
                         const state_t *PRE_state, const weak_secret_key_t *wsk, const private_key_t *sk, gmp_randstate_t prng);
 
