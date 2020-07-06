@@ -264,6 +264,8 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
         _EXIT("encryption fallita");
 
     mpz_t sigma, r, tmp, t, g0_t, g2_t, vec[MAXSIZE]={0};
+    mpz_inits(sigma, r, tmp, t, g0_t, g2_t, vec[1], vec[2], vec[3], vec[0], vec[4], vec[5], NULL);
+    
     size_t byte2write=0, byte2writes=0, offset=0, len;
 
     uint8_t *tx=malloc(sizeof(mpz_t)*100);
@@ -271,10 +273,11 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
     uint8_t *BC=malloc(sizeof(mpz_t)*64);//1024 byte
     uint8_t c[MAXSIZE];
     
+    // range msg 1< m < 2^n -1
     assert(mpz_cmp_ui(plaintext->m, 0L)>0);
-    assert(mpz_cmp(plaintext->m, pk->N) < 0);
+    mpz_ui_pow_ui(tmp, 2, n_msg_length);
+    assert(mpz_cmp(plaintext->m, tmp) < 0);
 
-    mpz_inits(sigma, r, tmp, t, g0_t, g2_t, vec[1], vec[2], vec[3], vec[0], vec[4], vec[5], NULL);
     pmesg_mpz(msg_very_verbose, "\ntesto in chiaro", plaintext->m);
     
     //sigma in Zn random
@@ -369,7 +372,6 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
     mpz_urandomb(t, prng, t_exp);
     mpz_powm(g0_t, pk->g0, t, pk->NN);
     mpz_powm(g2_t, pk->g2, t, pk->NN);
-
     
     
     mpz_set(vec[0], ciphertext_K->info_cipher.K_1.A);                                    // A
@@ -1219,21 +1221,6 @@ void ReEncrypt (ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const st
                         vec[3], vec[4], vec[5], NULL);
 }
 
-/*
- * verifica la correttezza dei parametri
- *
- */
-/*
-bool verify_params(const shared_params_t params) {
-    
-    bool return_value = true;
-    assert(params);
- if ((params->p_1_bits >= params->p_bits) || (params->q_1_bits >= params->q_bits))
-        return_value = false;
-    
-    return (return_value);
-}*/
-
 
 /*
  * init method
@@ -1331,11 +1318,6 @@ void plaintext_clear(plaintext_t *plaintext) {
     assert(plaintext);
     mpz_clear(plaintext->m);
 }
-/*
-void msg_clear(msg_t *msg) {
-    assert(msg);
-    mpz_clear(msg->contrib);
-}*/
 
 void ciphertext_clear(ciphertext_t *K) {
     if(K!=0) {
