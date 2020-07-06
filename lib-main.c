@@ -277,6 +277,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
     // range msg 1< m < 2^n -1
     assert(mpz_cmp_ui(plaintext->m, 0L)>0);
     mpz_ui_pow_ui(tmp, 2, n_msg_length);
+    mpz_sub_ui(tmp, tmp, 1);
     assert(mpz_cmp(plaintext->m, tmp) < 0);
 
     pmesg_mpz(msg_very_verbose, "\ntesto in chiaro", plaintext->m);
@@ -364,7 +365,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
     //set t in 0,.., 2^(|N^2|+k) -1
     mpz_set_ui(t, mpz_sizeinbase(pk->NN,2)); //|N^2| is the bit-lenght of N^2
     mpz_add_ui(t, t, k2_sec_parameter_H3_hash_functions);//k2 
-    unsigned long int t_exp=mpz_get_ui(t);//controlla range
+    unsigned long int t_exp=mpz_get_ui(t);
     
     mpz_urandomb(t, prng, t_exp);
     mpz_powm(g0_t, pk->g0, t, pk->NN);
