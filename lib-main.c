@@ -477,7 +477,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
         mpz_powm(tmp_, K->info_cipher.K_1.A, K->info_cipher.K_1.c, pk->NN);
         mpz_mul(g0_s_A_c, g0_s_A_c, tmp_);
         mpz_mod(g0_s_A_c, g0_s_A_c, pk->NN);
-        //gmp_printf("g0_s_A_c: %Zd\n", g0_s_A_c);
+
         
         //g2^s * D^c mod N^2
         mpz_powm(g2_s_D_c, pk->g2, K->info_cipher.K_1.s, pk->NN);
@@ -579,20 +579,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 mpz_mod(w_1, w_1, pk->N);
                 //pmesg_mpz(msg_very_verbose, "w_1= a*r mod N", w_1); 
 
-
-                //testing
-                //test_1,test_2,test_3
-                /*printf("valori passati senza essere computati\n");
-                mpz_mod(test_1, wsk_->contrib, pk->N);
-                pmesg_mpz(msg_very_verbose, "test_1 a mod N atteso= ", test_1);
                 
-                mpz_mod(test_2, pk->testing_r, pk->N);
-                pmesg_mpz(msg_very_verbose, "test_2 r mod N atteso= ", test_2);
-    
-                mpz_mul(test_3, test_1, test_2);
-                mpz_mod(test_3, test_3, pk->N);
-                pmesg_mpz(msg_very_verbose, "test_3, ar mod N computato = ", test_3);*/
-
                 //mpz_powm(cmt_sigma, pk->g0, test_3, pk->NN);
                 mpz_powm(cmt_sigma, pk->g0, w_1, pk->NN);
                 
