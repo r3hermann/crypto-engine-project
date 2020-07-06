@@ -620,7 +620,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             
             // computing //
                         
-            //test
+
             /*uint8_t digest_h_2_compute_sigma[SHA3_384_DIGEST_SIZE]={0};
             perform_hashing_sha3N(sha3_384_ctx, sha3_384_init, sha3_384_update, sha3_384_digest,
                                   SHA3_384_DIGEST_SIZE, str_sigma, length_byte_sigma, digest_h_2_compute_sigma);*/
@@ -723,7 +723,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
         int nbyte=0;
         
         if (wsk){
-                //printf("check --------> weak\n");
                 
                 mpz_powm(cmt_sigma_dot, K->info_cipher.K_2.A_dot, wsk->b, pk->NN);
                 mpz_invert(cmt_sigma_dot, cmt_sigma_dot, pk->NN);
@@ -875,8 +874,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 /*perform_hashing_sha3(sha3_384_ctx, sha3_384_init, sha3_384_update, sha3_384_digest,
                                                         SHA3_384_DIGEST_SIZE, tmpsig_computed, &tmpsig_computed[0],
                                                             digest_hash_2_compute_sigma);*/
-                //const int nbyte= snprintf(NULL, 0, "%02x", (uint32_t)pk->id_hash);
-                //printf("id userB= %02x %02x\n", (uint32_t)pk->id_hash,(uint32_t)PRE_state->h_2);
                                 
 
                 //compute_sigma
