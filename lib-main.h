@@ -89,7 +89,7 @@
 
 //H2 sha3-384 (right shift), msg length (one-time-pad)
 #define n_sec_parameter_H2_hash_functions (uint16_t)128
-#define n_msg_length (uint16_t)384 //bit-lenghth msg to be encrypted
+#define n_msg_length 384 //bit-lenghth msg to be encrypted
 
 //H3 sha3-256 (right shift)
 #define k2_sec_parameter_H3_hash_functions (uint16_t)256
