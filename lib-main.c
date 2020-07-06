@@ -1236,11 +1236,6 @@ void ReKeyGen_keys_init(re_encryption_key_t *RE_enc_key){
     mpz_inits(RE_enc_key->k2_x2y, RE_enc_key->A_dot,
                RE_enc_key->B_dot, RE_enc_key->C_dot, NULL);
 }
-/*
-void msg_init(msg_t *msg) {
-    assert(msg);
-    mpz_init(msg->contrib);
-}*/
 
 void plaintext_init(plaintext_t *plaintext) {
     if (plaintext!=0)
@@ -1324,5 +1319,3 @@ void ciphertextK1_clear(ciphertext_t *K) {
               K->info_cipher.K_1.D, K->info_cipher.K_1.c, K->info_cipher.K_1.s, NULL);
     } else{_EXIT("ciphertext nonvalido");}
 }*/
-
-/****/
