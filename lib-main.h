@@ -113,7 +113,7 @@ struct sha3_512_ctx static_context_512;
 /*
  * ciphertext type. k_1= (A, B, D, c, s), k_2=K=(A, A', B, C, A_dot, B_dot, C_dot)
  */
-typedef enum { ciphertext_type_k_1, ciphertext_type_k_2, items_k1=5, items_k2=7, } ciphertext_type_t;
+typedef enum { ciphertext_type_k_1, ciphertext_type_k_2 } ciphertext_type_t;
 
 /*
  * undirectional ReEncrypt key
