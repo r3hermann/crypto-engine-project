@@ -308,7 +308,6 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
 
     //endian host
     memcpy(share_buffer+byte2writes+byte2write, &(pk->id_hash), (size_t)nbyte);
-    //snprintf(share_buffer+(byte2writes+byte2write), (size_t)nbyte+1, "%lu", pk->id_hash);
 
     
     //H generic sigma || msg || id, Zn^n bits outout
@@ -492,8 +491,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
         mpz_powm(g2_s_D_c, pk->g2, K->info_cipher.K_1.s, pk->NN);
         mpz_powm(tmp_, K->info_cipher.K_1.D, K->info_cipher.K_1.c, pk->NN);
         mpz_mul(g2_s_D_c, g2_s_D_c, tmp_); 
-        mpz_mod(g2_s_D_c, g2_s_D_c, pk->NN);           
-    
+        mpz_mod(g2_s_D_c, g2_s_D_c, pk->NN);
 
             
         mpz_set(vec[0], K->info_cipher.K_1.A);                                    // A
@@ -510,7 +508,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             offset+=len;
         }
         
-                                                                                                                    //BC
+                                                                                                            // BC
 
         dump_B=mpz_export(NULL, &byte2write, 1,1,0,0, K->info_cipher.K_1.B);
         dump_C=mpz_export(NULL, &len, 1,1,0,0, K->info_cipher.K_1.C);
@@ -659,7 +657,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             memcpy(share_buffer, dump_sigma, byte2write_sigma*sizeof(uint8_t));    
             memcpy(share_buffer+byte2write_sigma, dump_msg, byte2write_msg*sizeof(uint8_t));
             
-            //snprintf(share_buffer+(byte2writes+byte2write), (unsigned int)nbyte+1, "%lu", PRE_state->h_1);
             const int nbyte= snprintf(NULL, 0, "%02x", (uint32_t)pk->id_hash);
 
             
@@ -958,11 +955,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 
                 mpz_powm(tmpB, pk->delegator->g1, check_H, pk->delegator->NN);
                 mpz_mul(tmpB, tmpB, tmp);
-                mpz_mod(tmpB, tmpB, pk->delegator->NN);
-                
-                //pmesg_mpz(msg_very_verbose, "check -----> tmpA =", tmpA);
-                //pmesg_mpz(msg_very_verbose, "check -----> K->info_cipher.K_2.A =", K->info_cipher.K_2.A);
-                
+                mpz_mod(tmpB, tmpB, pk->delegator->NN);                
                 
                 if (mpz_cmp(tmpA, K->info_cipher.K_2.A)==0  && mpz_cmp(tmpB, K->info_cipher.K_2.B)==0) {
                     pmesg_mpz(msg_very_verbose, "message =", computed_m);
@@ -1050,7 +1043,7 @@ void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key,
                                                        (byte2write_sigma_dot+byte2write_beta_dot)+(size_t)nbyte/2,  digest_h_Y_rXY);*/
     
     
-    //H generic hash Y, Zn^n bits outout
+    //H generic hash Y, Zn^2 bits outout
     //rX->Y= HY ( sigma_dot||beta_dot||idY )
     uint8_t digest_h_Y_rXY_Zn2[SIZE_BUFFER]={0};
     perform_hashing_sha3_generic(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
