@@ -276,7 +276,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
     
     // range msg 1< m < 2^n -1
     assert(mpz_cmp_ui(plaintext->m, 0L)>0);
-    mpz_ui_pow_ui(tmp, 2, n_msg_length);
+    mpz_ui_pow_ui(tmp, 2, n_msg_bitlength);
     mpz_sub_ui(tmp, tmp, 1);
     assert(mpz_cmp(plaintext->m, tmp) < 0);
 
@@ -982,7 +982,7 @@ void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key, const state
     mpz_urandomm(sigma_dot, prng, pkY->N);
     
     //beta_dot random in {0,1}^k1
-    mpz_urandomb(beta_dot, prng, k1_sec_parameter_H1_hash_functions);//k1
+    mpz_urandomb(beta_dot, prng, k1_sec_parameter_H1_hash_functions);
     
     extern uint8_t share_buffer[];
     
@@ -1092,7 +1092,7 @@ void ReEncrypt (ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const st
     mpz_powm(tmp, K->info_cipher.K_1.A, K->info_cipher.K_1.c, pkX->NN);
     mpz_mul(g0X_s_A_c, g0X_s_A_c, tmp);
     mpz_mod(g0X_s_A_c, g0X_s_A_c, pkX->NN);
-    //gmp_printf("g0X_s_A_c): %Zd\n", g0X_s_A_c);
+
     
     //g2X^s * D^c mod N^2
     mpz_powm(g2X_s_D_c, pkX->g2, K->info_cipher.K_1.s, pkX->NN);
@@ -1126,19 +1126,13 @@ void ReEncrypt (ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const st
     memcpy(c+offset, BC, sizeof(uint8_t)*(len+byte2write));
     
     
-    //H3, output sha3-256
+    //c=H3( A, D, g0X, g2X, (g0X)^s *(A)^c, (g2X)^s *(D)^c), output sha3-256
     uint8_t digest_chec_c[SHA3_512_DIGEST_SIZE]={0};
     perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
                                                     offset+byte2write+len, digest_chec_c, SHA3_256_DIGEST_SIZE);
     
     mpz_import(check_c, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_chec_c);
     mpz_fdiv_q_2exp(check_c, check_c, k2_sec_parameter_H3_hash_functions);//get sha3-256 bits (shift right)
-    
-    /*printf("output ");
-    for(size_t i=0; i<offset+byte2write+len; i++){
-        printf("%02x", c[i]);
-    }
-    printf("\n\n");    */
     
 
     //verify_params c = H3
