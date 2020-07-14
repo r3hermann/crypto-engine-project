@@ -64,9 +64,8 @@ int main (int argc, char* argv[]){
     state_t PRE_state;
     
     long prng_seed=random_seed();
-    //printf("random_seed %ld\n",seed);
     
-
+    //hash functions
     extern struct sha3_512_ctx static_context_512;
     sha3_512_init(&static_context_512);
     
@@ -153,11 +152,11 @@ int main (int argc, char* argv[]){
     }
     else { //random msg
         if (fixed_msg < 0) {
-            unsigned long sub=n_msg_length-((unsigned long int)labs(fixed_msg));
+            unsigned long sub=n_msg_bitlength-((unsigned long int)labs(fixed_msg));
             mpz_set_ui(plaintext_msg.m, sub);
         }
         else
-            mpz_urandomb(plaintext_msg.m, prng, n_msg_length);
+            mpz_urandomb(plaintext_msg.m, prng, n_msg_bitlength);
     }
 
     printf("\n\nCifratura plaintext...\n");
