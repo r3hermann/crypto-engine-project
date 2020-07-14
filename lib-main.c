@@ -39,7 +39,6 @@ static inline void display_hex(unsigned int length, uint8_t *data) {
     
 }
 
-
 long random_seed () {
 
     FILE *dev_random;
@@ -910,11 +909,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 /*perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
                                                        (byte2write_compute_sigma+byte2write_msg)+(size_t)nbyte/2, digest_check_h_sig_m);*/
 
-
-                /*printf("check share_buffer ");
-                for(size_t i=0;i<(byte2write_compute_sigma+byte2write_msg)+(size_t)nbyte/2;i++)
-                    printf("%02x", share_buffer[i]);
-                printf("\n\n");*/
                 
                 mpz_import(check_H, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_check_h_sig_m_Zn2);
                 mpz_mod(check_H, check_H, pk->NN);
