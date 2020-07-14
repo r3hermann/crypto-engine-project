@@ -18,7 +18,7 @@ These instructions will get you a copy of the project up and running on your loc
 * [ PBC Library: the Pairing-Based Cryptography library ](https://crypto.stanford.edu/pbc/)
  
 
-### Installing (da completare)
+### Installing
 
 clona il repository, per usare il progetto usare il Makefile
 
@@ -29,42 +29,9 @@ make
 
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
 
 
 
-## Running the tests (da completare)
-
-Explain how to run the automated tests for this system
-
-
-
-### Break down into end to end tests(da completare)
-Explain what these tests test and why
-
-
-
-```
-
-Give an example
-
-```
-
-
-
-### And coding style tests
-
-
-
-Explain what these tests test and why
-
-
-
-```
-
-Give an example
-
-```
 
 
 ## Authors
