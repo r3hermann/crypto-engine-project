@@ -20,13 +20,18 @@
 #include<stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <nettle/sha1.h>
 #include<errno.h>
 
 #define prng_sec_level 96
 
 #define bench_sampling_time 5 /* secondi */
 #define max_samples (bench_sampling_time * 1000)
+
+
+/*
+ * external global variable
+ */
+struct sha3_512_ctx static_context_512;
 
 int main (int argc, char* argv[]){
     
@@ -68,7 +73,7 @@ int main (int argc, char* argv[]){
     //hash functions
     extern struct sha3_512_ctx static_context_512;
     sha3_512_init(&static_context_512);
-    
+
     if (argv[1] == NULL) {
         printf("esecuzione minimale...\n\n");
     }
