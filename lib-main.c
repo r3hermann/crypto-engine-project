@@ -5,11 +5,11 @@
 #include <errno.h> 
 
 
-#define CHECK(filepointer) ({FILE* __val=(filepointer); ( __val ==NULL ?                                      \
-                                ({fprintf(stderr, "ERROR (" __FILE__ ":%d) %s\n",__LINE__,strerror(errno));     \
-                                exit(EXIT_FAILURE);}): (*(int*)__val)); })
-/*
+#define CHECK(filepointer) if(!filepointer) {fprintf(stderr, "ERROR (" __FILE__ ":%d) %s\n",__LINE__,strerror(errno));     \
+                                                                exit(EXIT_FAILURE);}
 
+                            
+/*
     size_t bit=0,offset_dgst=0;                \
     uint8_t *sha3_tmp=malloc(sizeof(uint8_t)*bytesize);       \
     uint8_t digest[SHA3_512_DIGEST_SIZE]={0};                   \
@@ -45,7 +45,8 @@ long random_seed () {
     unsigned int byte_count;
     int seed=0;
 	byte_count = BYTEREAD;
-	CHECK(dev_random = fopen("/dev/random", "r"));
+    dev_random = fopen("/dev/random", "r");
+	CHECK(dev_random);
 	fread(&seed, sizeof(char), byte_count, dev_random);
 	fclose(dev_random);
     dev_random=NULL;
@@ -65,14 +66,19 @@ void PRE_scheme_state (state_t *PRE_state, gmp_randstate_t prng) {
     PRE_state->h_1=(uint32_t)mpz_get_ui(id1);
     PRE_state->h_2=(uint32_t)mpz_get_ui(id2);
     PRE_state->h_3=(uint32_t)mpz_get_ui(id3);
-    
-    /*PRE_state->k1=k1_sec_parameter_H1_hash_functions;
-    PRE_state->n=n_sec_parameter_H2_hash_functions;
-    PRE_state->k2=k2_sec_parameter_H3_hash_functions;*/
 
     mpz_clears (id1, id2, id3, NULL);
     
 }
+
+/*
+ * external global variable
+ */
+uint8_t share_buffer[];
+uint8_t *dump_sigma;
+uint8_t *dump_msg;
+uint8_t *dump_beta_dot;
+
 
 /*
  * contrib KeyGen
@@ -87,7 +93,7 @@ void generate_keys(keygen_params_t *params, unsigned p_bits, unsigned q_bits, pu
 
     mpz_t alpha, tmp, tmp1, alpha2, pp, qq, lamb_N, t, range;
     mpz_inits(alpha, tmp, tmp1, alpha2, pp, qq,  lamb_N, t, range, NULL);
-        
+
     pmesg(msg_verbose, "generazione parametri...");
     
     if ( pk==NULL || sk==NULL || wsk==NULL)
@@ -517,11 +523,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
         
         mpz_import(check_c, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_c);
         mpz_fdiv_q_2exp(check_c, check_c, k2_sec_parameter_H3_hash_functions);//get sha3-256 bits (shift right)
-        
-        /*printf("output ");
-            for(size_t i=0; i<offset+byte2write+len; i++){
-            printf("%02x", c[i]);
-    }printf("\n\n");*/
         
         
         //check c
