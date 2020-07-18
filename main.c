@@ -104,7 +104,7 @@ int main (int argc, char* argv[]){
             exit(EXIT_FAILURE);
         }
     }
-    
+
     if (do_bench)
         set_messaging_level(msg_silence);
     
