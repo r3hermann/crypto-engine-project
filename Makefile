@@ -33,7 +33,7 @@ PLOTS = $(wildcard plots/*.plt)
 PLOTS_SVG = $(PLOTS:.plt=.svg)
 
 COMMA := ,
-CFLAGS += -std=gnu11  -Wall -O0 -ggdb
+CFLAGS += -std=gnu11  -Wall -Wpedantic -O0 -ggdb
 CFLAGS += $(if $(filter yes,$(USE_CUSTOM_LIBS)),-I$(CUSTOM_LIBS_DIR)/include/,)
 LDFLAGS += $(if $(filter yes,$(USE_CUSTOM_LIBS)),-L$(CUSTOM_LIBS_DIR)/lib/ -Wl$(COMMA)-rpath -Wl$(COMMA)$(CUSTOM_LIBS_DIR)/lib/ -L$(CUSTOM_LIBS_DIR)/lib64/ -Wl$(COMMA)-rpath -Wl$(COMMA)$(CUSTOM_LIBS_DIR)/lib64/,) $(if $(filter yes,$(USE_STATIC)),-static)
 CFLAGS += $(if $(filter yes,$(USE_RDTSCP)),-DUSE_RDTSCP,)
