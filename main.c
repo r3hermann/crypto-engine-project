@@ -22,16 +22,22 @@
 #include <string.h>
 #include<errno.h>
 
-#define prng_sec_level 96
+#define DEFAULT_p_BITS 1024
+#define DEFAULT_q_BITS 1024
 
+
+
+#define prng_sec_level 96
 #define bench_sampling_time 5 /* secondi */
 #define max_samples (bench_sampling_time * 1000)
 
 
-/*
- * external global variable
- */
-struct sha3_512_ctx static_context_512;
+
+/** global variable **/
+
+
+//extern uint8_t share_buffer[SIZE_BUFFER];
+
 
 int main (int argc, char* argv[]){
     
@@ -46,8 +52,10 @@ int main (int argc, char* argv[]){
     bool do_bench = false;
     
     gmp_randstate_t prng;
-    unsigned int p_bits=default_p_bits;
-    unsigned int q_bits=default_q_bits;
+    
+    unsigned int p_bits=DEFAULT_p_BITS;
+    unsigned int q_bits=DEFAULT_q_BITS;
+    unsigned int size_NN=((p_bits+q_bits)*2)/CHAR_BIT; //byte
 
     plaintext_t plaintext_msg;
 
@@ -70,10 +78,11 @@ int main (int argc, char* argv[]){
     
     long prng_seed=random_seed();
     
-    //hash functions
-    extern struct sha3_512_ctx static_context_512;
-    sha3_512_init(&static_context_512);
 
+    //hash functions
+    struct sha3_512_ctx context_512;
+    sha3_512_init(&context_512);
+    
     if (argv[1] == NULL) {
         printf("esecuzione minimale...\n\n");
     }
@@ -167,7 +176,7 @@ int main (int argc, char* argv[]){
     printf("\n\nCifratura plaintext...\n");
     perform_clock_cycles_sampling_period(
         timing, applied_sampling_time, max_samples, tu_millis,
-        {encrypt(prng, &plaintext_msg, &pk, &K, &PRE_state);},{});
+        {encrypt(prng, &plaintext_msg, &pk, &K, &PRE_state, context_512, size_NN);},{});
         printf("\nciphertext generato di tipo K=(A, B, D, c, s)\n\n");
     if (do_bench)
         printf_short_stats(" Cifratura plaintext...", timing, "");
@@ -179,7 +188,7 @@ int main (int argc, char* argv[]){
 
     perform_clock_cycles_sampling_period(
                 timing, applied_sampling_time, max_samples, tu_millis,{
-                    decryption(&K, &pk, &PRE_state, &wsk, &sk, prng);},{});
+                    decryption(&K, &pk, &PRE_state, &wsk, &sk, prng, context_512, size_NN);},{});
     if (do_bench)
         printf_short_stats("Decifratura del messaggio ricevuto... ", timing, "");
         
@@ -191,7 +200,7 @@ int main (int argc, char* argv[]){
 
     perform_clock_cycles_sampling_period(
                 timing, applied_sampling_time, max_samples, tu_millis,{
-            decryption(&K, &pk, &PRE_state, NULL, &sk, prng);},{});
+            decryption(&K, &pk, &PRE_state, NULL, &sk, prng, context_512, size_NN);},{});
     if (do_bench)
         printf_short_stats("seconda decifratura, caso long term secret key....", timing, "");
     
@@ -212,7 +221,7 @@ int main (int argc, char* argv[]){
     
     perform_clock_cycles_sampling_period(
         timing, applied_sampling_time, max_samples, tu_millis,{
-            RekeyGen(prng, &RE_enc_key, &PRE_state, &pk, &skX, &wskX); //pk bob
+            RekeyGen(prng, &RE_enc_key, &PRE_state, &pk, &skX, &wskX, context_512, size_NN); //pk bob
             },{});
     printf("\nrk1_X -> Y= (A_dot, B_dot, C_dot)\n");
     printf("output re-KeyGen: undirectional re-encryption key rkX -> Y = (rk1_X -> Y, rk2_X -> Y)\n\n");
@@ -226,7 +235,7 @@ int main (int argc, char* argv[]){
     ciphertext_RE_init(&K);
     perform_oneshot_clock_cycles_sampling(time, tu_millis,{
             //mpz_init(K.info_cipher.K_2.C_dot);
-            ReEncrypt(&K, &RE_enc_key, &PRE_state, &pkX); //re-enc cipher under alices pk
+            ReEncrypt(&K, &RE_enc_key, &PRE_state, &pkX, context_512); //re-enc cipher under alices pk
         });
     printf("cifratura ciphertext= (A, A', B, C, A_dot, B_dot, C_dot)\n");
     if (do_bench)
@@ -241,7 +250,7 @@ int main (int argc, char* argv[]){
     
     perform_clock_cycles_sampling_period(
         timing, applied_sampling_time, max_samples, tu_millis,{
-            decryption(&K, &pk, &PRE_state, &wsk, &sk, prng); //bob decryption
+            decryption(&K, &pk, &PRE_state, &wsk, &sk, prng, context_512, size_NN); //bob decryption
         },{});
     
     if (do_bench)
@@ -252,7 +261,7 @@ int main (int argc, char* argv[]){
     printf("controllo idonieta' su K in corso...\n");
     perform_clock_cycles_sampling_period(
         timing, applied_sampling_time, max_samples, tu_millis,{
-            decryption(&K, &pk, &PRE_state, NULL, &sk, prng);
+            decryption(&K, &pk, &PRE_state, NULL, &sk, prng, context_512, size_NN);
     },{});
     
     if (do_bench)
