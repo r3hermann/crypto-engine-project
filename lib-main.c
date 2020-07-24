@@ -5,33 +5,46 @@
 #include <errno.h> 
 
 
-#define CHECK(filepointer) if(!filepointer) {fprintf(stderr, "ERROR (" __FILE__ ":%d) %s\n",__LINE__,strerror(errno));     \
-                                                                exit(EXIT_FAILURE);}
+#define CHECK(filepointer) if(!filepointer) {fprintf(stderr, "ERROR (" __FILE__ ":%d) %s\n",__LINE__,strerror(errno));    \
+                                                                     exit(EXIT_FAILURE);}
 
-                            
-/*
-    size_t bit=0,offset_dgst=0;                \
-    uint8_t *sha3_tmp=malloc(sizeof(uint8_t)*bytesize);       \
-    uint8_t digest[SHA3_512_DIGEST_SIZE]={0};                   \
-                                                                                            \
-    for(size_t i=0; i<=SIZE_BUFFER; i+=SIZE_BUFFER){                         \
-        memcpy(sha3_tmp, share_buffer, bytesize*sizeof(uint8_t));\
-        memcpy(sha3_tmp+bytesize, &bit, sizeof(uint8_t));\
-                                                        \
-        sha3_512_update(&static_context_512, bytesize+1, sha3_tmp);\
-        sha3_512_digest(&static_context_512, SHA3_512_DIGEST_SIZE, digest);\
-        \
-        \
-        memcpy(digest_h_Zn2+offset_dgst, digest, SHA3_512_DIGEST_SIZE);\
-        offset_dgst+=SHA3_512_DIGEST_SIZE;\
-        bit++;\
-        printf("\n\n");                                                     \
-    }    \
-    display_hex(128, digest_h_Zn2);                                            \
-})
-}*/
-                  
-static inline void display_hex(unsigned int length, uint8_t *data) {
+
+
+
+#define  perform_hashing_sha3_generic(CTX, FNC_UPDATE, FNC_DIGEST, DGST_SIZE, BUFFER,                \
+                                                                BLOCKSIZE, DIGESTSXXX ) do{                                                      \
+    char buffer[2048]={0};                                                                                                                              \
+    size_t n=0, offset_dgst=0, block_size=0;                                                                                     \
+    uint8_t *sha3_tmp=malloc(sizeof(uint8_t)*BLOCKSIZE+1);                                                                        \
+    uint8_t digest[SHA3_512_DIGEST_SIZE]={0};                                                                                             \
+    if (  DGST_SIZE > (SHA3_512_DIGEST_SIZE) ) {                                                                                           \
+       for( size_t i=0; i<DGST_SIZE; i+=SHA3_512_DIGEST_SIZE){                                                                  \
+           memcpy(sha3_tmp, BUFFER, BLOCKSIZE*sizeof(uint8_t));                                                                   \
+           memcpy(sha3_tmp+BLOCKSIZE, &n, sizeof(uint8_t));                                                                           \
+           FNC_UPDATE(&CTX, BLOCKSIZE+1, sha3_tmp);                                                                                    \
+           FNC_DIGEST(&CTX, SHA3_512_DIGEST_SIZE, digest);                                                                            \
+           memcpy(DIGESTSXXX+offset_dgst, digest, SHA3_512_DIGEST_SIZE);                                                  \
+           offset_dgst+=SHA3_512_DIGEST_SIZE;                                                                                                 \
+           n++;                                                                                                                                                       \
+           block_size+=BLOCKSIZE+1;                                                                                                                  \
+        }                                                                                                                                                               \
+    } else {                                                                                                                                                         \
+            FNC_UPDATE(&CTX, BLOCKSIZE, BUFFER);                                                                                           \
+            FNC_DIGEST(&CTX, DGST_SIZE, DIGESTSXXX);                                                                                    \
+    }                                                                                                                                                                   \
+    snprintf(buffer, sizeof(buffer), "\ndigest (%d bit)", DGST_SIZE*8 );                                                              \
+    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                      \
+                                                                                                                                                                        \
+    free(sha3_tmp);                                                                                                                                             \
+}while(0)
+                                                                
+                                                                
+                                                                
+/* display_hex(SHA3_512_DIGEST_SIZE, digest);              \
+    printf("\n\n\n");*/
+                                                                
+                
+static inline void display_hex(long unsigned int length, uint8_t *data) {
     unsigned int i;
   for (i= 0; i<length; i++)
     printf("%02x", data[i]);
@@ -70,14 +83,6 @@ void PRE_scheme_state (state_t *PRE_state, gmp_randstate_t prng) {
     mpz_clears (id1, id2, id3, NULL);
     
 }
-
-/*
- * external global variable
- */
-uint8_t share_buffer[];
-uint8_t *dump_sigma;
-uint8_t *dump_msg;
-uint8_t *dump_beta_dot;
 
 
 /*
@@ -261,23 +266,24 @@ void generate_keys(keygen_params_t *params, unsigned p_bits, unsigned q_bits, pu
 /*
  * encrypt, k=ABCDcs
  */
-void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_key_t *pk,
-                    ciphertext_t *ciphertext_K, const state_t *PRE_state) {    
+void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_key_t *pk, ciphertext_t *ciphertext_K,
+                                    const state_t *PRE_state, struct sha3_512_ctx context_512, unsigned int size_NN) {    
 
     assert(prng);
     
     if ( plaintext==NULL || pk==NULL || ciphertext_K==NULL || PRE_state==NULL  )
         _EXIT("encryption fallita");
 
-    mpz_t sigma, r, tmp, t, g0_t, g2_t, vec[MAXSIZE]={0};
+    mpz_t sigma, r, tmp, t, g0_t, g2_t, vec[BUF_SIZE]={0};
     mpz_inits(sigma, r, tmp, t, g0_t, g2_t, vec[1], vec[2], vec[3], vec[0], vec[4], vec[5], NULL);
     
     size_t byte2write=0, byte2writes=0, offset=0, len;
 
     uint8_t *tx=malloc(sizeof(mpz_t)*100);
-    uint8_t *dump_C, *dump_B;
     uint8_t *BC=malloc(sizeof(mpz_t)*64);//1024 byte
-    uint8_t c[MAXSIZE];
+    uint8_t *dump_C, *dump_B, *dump_sigma, *dump_msg;
+    uint8_t c[BUF_SIZE], dump_buffer[size_NN];
+    const int nbyte= snprintf(NULL, 0, "%02x", pk->id_hash);
     
     // range msg 1< m < 2^n -1
     assert(mpz_cmp_ui(plaintext->m, 0L)>0);
@@ -288,44 +294,33 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
     pmesg_mpz(msg_very_verbose, "\ntesto in chiaro", plaintext->m);
     
     //sigma in Zn random
-    mpz_urandomm(sigma, prng, pk->N);    
-    
-    extern uint8_t share_buffer[];
-    extern uint8_t *dump_sigma;
-    extern uint8_t *dump_msg;
-    
-    //memcpy(share_buffer, str_sigma, length_byte_sigma*sizeof(char));    
-    //memcpy(share_buffer+(length_byte_sigma), str_plaintext, (length_byte_msg)*sizeof(char));
-    /*const size_t nbyte= snprintf(NULL, 0, "%lu", pk->id_hash);
-    length_byte=(length_byte_sigma)+(length_byte_msg);
-    snprintf(share_buffer+(length_byte), nbyte+1, "%lu", pk->id_hash);*/
-    
-    //H1 sigma || m || id, (string base 10)
-    /*uint8_t digest_h_1_sigmid[SHA3_512_DIGEST_SIZE];
-    perform_hashing_sha3(sha3_512_ctx, sha3_512_init, sha3_512_update,
-                            sha3_512_digest, SHA3_512_DIGEST_SIZE, concat_h1, &concat_h1[0], digest_h_1_sigmid);*/
-    
+    mpz_urandomm(sigma, prng, pk->N);  
 
     
     dump_msg=mpz_export(NULL, &byte2write, 1,1, 0, 0, plaintext->m);
     dump_sigma=mpz_export(NULL, &byte2writes, 1,1, 0, 0, sigma);
 
-    memcpy(share_buffer, dump_sigma, byte2writes*sizeof(uint8_t));    
-    memcpy(share_buffer+(byte2writes), dump_msg, byte2write*sizeof(uint8_t));
-        
-    const int nbyte= snprintf(NULL, 0, "%02x", pk->id_hash);
+    memcpy(dump_buffer, dump_sigma, byte2writes*sizeof(uint8_t));    
+    memcpy(dump_buffer+(byte2writes), dump_msg, byte2write*sizeof(uint8_t));
 
     //endian host
-    memcpy(share_buffer+byte2writes+byte2write, &(pk->id_hash), (size_t)nbyte);
+    memcpy(dump_buffer+byte2writes+byte2write, &(pk->id_hash), (size_t)nbyte);
+    
+    //printf("output ");
+    //for(size_t i=0; i<(byte2writes+byte2write)+(size_t)nbyte/2; i++){printf("%02x", dump_buffer[i]);}
+    
     
     //H generic sigma || msg || id, Zn^n bits outout
-    uint8_t digest_h_s_m_Zn2[SIZE_BUFFER]={0};
-    perform_hashing_sha3_generic(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
-                                                       (byte2writes+byte2write)+(size_t)nbyte/2, digest_h_s_m_Zn2, SIZE_BUFFER);
+    uint8_t digest_h_s_m_Zn2[size_NN];
     
-    /*uint8_t digest_h_s_m[SHA3_512_DIGEST_SIZE]={0};
-    perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
-                                                       (byte2writes+byte2write)+(size_t)nbyte/2, digest_h_s_m);*/
+    perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, size_NN,
+                                            dump_buffer, (byte2writes+byte2write)+(size_t)nbyte/2, digest_h_s_m_Zn2);
+    
+
+
+    //printf("\nsize_NN= %u. SHA3_512_DIGEST_SIZE= %u\n",size_NN, SHA3_512_DIGEST_SIZE);
+    //printf("\n\n");
+
     
     //r
     mpz_import(r, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_s_m_Zn2);
@@ -333,15 +328,15 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
          
     //A=go^r mod N^2
     mpz_powm(ciphertext_K->info_cipher.K_1.A, pk->g0, r, pk->NN);       
-    
-    
-    //perform_hashing_sha3_(sha3_384_update, sha3_384_digest,
-                         //SHA3_384_DIGEST_SIZE, dump_sigma, byte2writes, digest_h_2_sigma);
    
     //H2 output sha3-348
     uint8_t digest_h_2_sigma[SHA3_512_DIGEST_SIZE]={0};
-    perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, dump_sigma,
-                                                    byte2writes, digest_h_2_sigma, SHA3_384_DIGEST_SIZE);
+    /*perform_hashing_sha3_512(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,
+                                                    dump_sigma, byte2writes, digest_h_2_sigma, SHA3_384_DIGEST_SIZE);*/
+    
+    perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,
+                                            dump_sigma, byte2writes, digest_h_2_sigma);
+    
     
     //C= H2 ( ( sigma ) xor m ), output sha3-384 
     mpz_import(tmp, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_2_sigma);
@@ -405,8 +400,11 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
     //H3 output sha3-512
     //c= (H_3 A || D || g0 || g2 || g0_t || g2_t || BC), BC=m
     uint8_t digest_h_3_c[SHA3_512_DIGEST_SIZE]={0};
-    perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
-                                                    offset+byte2write+len, digest_h_3_c, SHA3_256_DIGEST_SIZE);
+    /*perform_hashing_sha3_512(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
+                                                    offset+byte2write+len, digest_h_3_c, SHA3_256_DIGEST_SIZE);*/
+    
+    perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
+                                                    offset+byte2write+len, digest_h_3_c);
     
     //printf("byte= %lu\n",offset+byte2write+len);
     mpz_import(ciphertext_K->info_cipher.K_1.c, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_3_c);
@@ -417,12 +415,6 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
     mpz_mul(tmp, ciphertext_K->info_cipher.K_1.c, r);
     mpz_sub(ciphertext_K->info_cipher.K_1.s, t, tmp);
     
-    
-    /*printf("output ");
-    for(size_t i=0; i<offset+byte2write+len; i++){
-        printf("%02x", c[i]);
-    }
-    printf("\n\n");*/
     
     ciphertext_K->ciphertext_type=ciphertext_type_k_1;//(A, B, D, c, s)
     
@@ -446,6 +438,7 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
     dump_B=NULL;
     dump_C=NULL;
 
+
     mpz_clears(sigma, r, tmp, t, g0_t, g2_t, vec[1], vec[2], vec[3], vec[0], vec[4], vec[5],NULL);
     
 }
@@ -454,23 +447,25 @@ void encrypt(gmp_randstate_t prng, const plaintext_t *plaintext,  const public_k
 /*
  * decrypt
  */
-void decryption (const ciphertext_t *K, const public_key_t *pk,
-                 const state_t *PRE_state, const weak_secret_key_t *wsk, const private_key_t *sk, gmp_randstate_t prng) {
+void decryption (const ciphertext_t *K, const public_key_t *pk, const state_t *PRE_state, const weak_secret_key_t *wsk,
+                                const private_key_t *sk, gmp_randstate_t prng, struct sha3_512_ctx context_512,
+                                    unsigned int size_NN) {
     
     assert(prng);    
     if (pk==NULL || K==NULL || PRE_state==NULL  || sk==NULL )
         _EXIT("encryption fallita");
     
-    mpz_t tmpk1, cmt_m, hash, cmt_sigma, tmp_g1, vec[MAXSIZE]={0};
+    mpz_t tmpk1, cmt_m, hash, cmt_sigma, tmp_g1, vec[BUF_SIZE]={0};
     mpz_inits(tmpk1, cmt_m, hash, cmt_sigma, tmp_g1, vec[0], vec[1], vec[2],
                         vec[3], vec[4], vec[5], NULL);
     
     size_t byte2write=0, offset=0, len;
     
     uint8_t *tx=malloc(sizeof(mpz_t)*100);
-    uint8_t *dump_C, *dump_B;
+    uint8_t *dump_C, *dump_B, *dump_sigma, *dump_msg;
+    uint8_t *dump_beta_dot;
     uint8_t *BC=malloc(sizeof(mpz_t)*64);//1024 byte
-    uint8_t c[MAXSIZE];
+    uint8_t c[BUF_SIZE], dump_buffer[size_NN];
 
     if(K->ciphertext_type == ciphertext_type_k_1){ //K=(A, B, D, c, s)
         
@@ -518,8 +513,11 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             
         //H3 verify_params, H2 output sha3-512
         uint8_t digest_c[SHA3_512_DIGEST_SIZE]={0};
-        perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
-                                                        offset+byte2write+len, digest_c, SHA3_256_DIGEST_SIZE);
+        /*perform_hashing_sha3_512(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
+                                                        offset+byte2write+len, digest_c, SHA3_256_DIGEST_SIZE);*/
+        
+        perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
+                                                        offset+byte2write+len, digest_c);
         
         mpz_import(check_c, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_c);
         mpz_fdiv_q_2exp(check_c, check_c, k2_sec_parameter_H3_hash_functions);//get sha3-256 bits (shift right)
@@ -606,15 +604,6 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
 
             
             // computing //
-                        
-
-            /*uint8_t digest_h_2_compute_sigma[SHA3_384_DIGEST_SIZE]={0};
-            perform_hashing_sha3N(sha3_384_ctx, sha3_384_init, sha3_384_update, sha3_384_digest,
-                                  SHA3_384_DIGEST_SIZE, str_sigma, length_byte_sigma, digest_h_2_compute_sigma);*/
-            
-            
-            extern uint8_t *dump_sigma;
-            extern uint8_t *dump_msg;            
             
             size_t byte2write_sigma=0, byte2write_msg=0;
             dump_sigma=mpz_export(NULL, &byte2write_sigma, 1, 1, 0, 0, cmt_sigma);
@@ -624,8 +613,11 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
         
             //H2 output sha3-348
             uint8_t digest_h_2_compute_sigma[SHA3_512_DIGEST_SIZE]={0};
-            perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, dump_sigma,
-                                                    byte2write_sigma, digest_h_2_compute_sigma, SHA3_384_DIGEST_SIZE);
+            /*perform_hashing_sha3_512(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,
+                                                        dump_sigma, byte2write_sigma, digest_h_2_compute_sigma, SHA3_384_DIGEST_SIZE);*/
+            
+            perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, SHA3_384_DIGEST_SIZE,
+                                                        dump_sigma, byte2write_sigma, digest_h_2_compute_sigma);
             
             //get m
             mpz_import(tmp_, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_2_compute_sigma);
@@ -633,25 +625,20 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             mpz_xor(cmt_m, K->info_cipher.K_1.C, tmp_);
             
             dump_msg=mpz_export(NULL, &byte2write_msg, 1,sizeof(uint8_t), 0, 0, cmt_m);            
-            memcpy(share_buffer, dump_sigma, byte2write_sigma*sizeof(uint8_t));    
-            memcpy(share_buffer+byte2write_sigma, dump_msg, byte2write_msg*sizeof(uint8_t));
+            memcpy(dump_buffer, dump_sigma, byte2write_sigma*sizeof(uint8_t));    
+            memcpy(dump_buffer+byte2write_sigma, dump_msg, byte2write_msg*sizeof(uint8_t));
             
             const int nbyte= snprintf(NULL, 0, "%02x", (uint32_t)pk->id_hash);
 
             
             //endian host
-            memcpy(share_buffer+(byte2write_sigma+byte2write_msg), &(pk->id_hash), (size_t)(nbyte)*sizeof(uint8_t));
-            
+            memcpy(dump_buffer+(byte2write_sigma+byte2write_msg), &(pk->id_hash), (size_t)(nbyte)*sizeof(uint8_t));
             
             //H generic ( sigma || msg || id ), Zn^n bits outout
-            uint8_t digest_h_s_m_Zn2[SIZE_BUFFER]={0};
-            perform_hashing_sha3_generic(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,
-                                     share_buffer,(byte2write_sigma+byte2write_msg+(size_t)nbyte/2),
-                                         digest_h_s_m_Zn2, SIZE_BUFFER);           
-            
-            /*uint8_t digest_h_s_m[SHA3_512_DIGEST_SIZE]={0};
-            perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,
-                                     share_buffer,(byte2write_sigma+byte2write_msg+(size_t)nbyte/2), digest_h_s_m);*/
+            uint8_t digest_h_s_m_Zn2[size_NN];
+            perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, size_NN,
+                                                                    dump_buffer,(byte2write_sigma+byte2write_msg+(size_t)nbyte/2),
+                                                                            digest_h_s_m_Zn2);           
             
             
             //generic hash function output
@@ -701,7 +688,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
     }//type1end
     else if (K->ciphertext_type == ciphertext_type_k_2)  { //K=(A, A', B, C, A_dot, B_dot, C_dot
                 
-        //printf("controllo idonieta' su K in corso...");
+        
         mpz_t tmp, computed_m, hashd, cmt_sigma_dot, beta_dot_c, tmp_g2;
         mpz_inits(tmp, computed_m, hashd, cmt_sigma_dot, beta_dot_c, tmp_g2, NULL);
        
@@ -778,10 +765,7 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 mpz_clears (lamb_N, pi, b, r, w_1, NULL);
             }
             
-            // compute   //            
-            
-            extern uint8_t *dump_beta_dot;
-            extern uint8_t *dump_sigma;
+            // compute   //  
             
             dump_sigma=mpz_export(NULL, &byte2write_sigma_dot, 1,1, 0, 0, cmt_sigma_dot);
             
@@ -789,35 +773,33 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
             //H1 computed sigma_dot, output sha3-512
             //computed sigma dot
             uint8_t digest_H1_cmt_sigma_dot [SHA3_512_DIGEST_SIZE];
-            perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, dump_sigma,
-                                                       byte2write_sigma_dot,  digest_H1_cmt_sigma_dot, SHA3_512_DIGEST_SIZE);
+            /*perform_hashing_sha3_512(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,
+                                                dump_sigma, byte2write_sigma_dot,  digest_H1_cmt_sigma_dot, SHA3_512_DIGEST_SIZE);*/
         
+            perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,
+                                                dump_sigma, byte2write_sigma_dot,  digest_H1_cmt_sigma_dot);
+                        
+                        
             mpz_import(tmp, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_H1_cmt_sigma_dot);
             
             //get beta_dot_c
             mpz_xor(beta_dot_c, K->info_cipher.K_2.C_dot, tmp);
                         
             dump_beta_dot=mpz_export(NULL, &byte2write_beta_dot, 1,1,0,0, beta_dot_c);
-            memcpy(share_buffer, dump_sigma, byte2write_sigma_dot*sizeof(uint8_t));
-            memcpy(share_buffer+byte2write_sigma_dot, dump_beta_dot, byte2write_beta_dot*sizeof(uint8_t));
+            memcpy(dump_buffer, dump_sigma, byte2write_sigma_dot*sizeof(uint8_t));
+            memcpy(dump_buffer+byte2write_sigma_dot, dump_beta_dot, byte2write_beta_dot*sizeof(uint8_t));
                 
             nbyte= snprintf(NULL, 0, "%02x", (uint32_t)pk->id_hash);
             
             //endian host
-            memcpy(share_buffer+byte2write_sigma_dot+byte2write_beta_dot, &(pk->id_hash), (size_t)nbyte);
+            memcpy(dump_buffer+byte2write_sigma_dot+byte2write_beta_dot, &(pk->id_hash), (size_t)nbyte);
             
             
             //H generic hash ( sigma_dot || beta_dot || id ), Zn^n bits outout
-            uint8_t digest_h_sigma_dot_beta_dot_Zn2[SIZE_BUFFER]={0};
-            perform_hashing_sha3_generic(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
-                                         byte2write_sigma_dot+byte2write_beta_dot+((size_t)nbyte/2),
-                                                    digest_h_sigma_dot_beta_dot_Zn2, SIZE_BUFFER);
-            
-
-           /* uint8_t digest_h_sigma_dot_beta_dot[SHA3_512_DIGEST_SIZE]={0};
-            perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
-                                                       byte2write_sigma_dot+byte2write_beta_dot+((size_t)nbyte/2),
-                                                            digest_h_sigma_dot_beta_dot);   */             
+            uint8_t digest_h_sigma_dot_beta_dot_Zn2[size_NN];
+            perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, size_NN,
+                                         dump_buffer, byte2write_sigma_dot+byte2write_beta_dot+((size_t)nbyte/2),
+                                                    digest_h_sigma_dot_beta_dot_Zn2);
             
             
             mpz_import(hashd, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_sigma_dot_beta_dot_Zn2);
@@ -855,61 +837,41 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
                 mpz_sub_ui(cmt_sigma, cmt_sigma, 1);
                 mpz_mod(cmt_sigma, cmt_sigma, pk->delegator->NN);
                 mpz_cdiv_q(cmt_sigma, cmt_sigma,  pk->delegator->N);
-       
-                
-                
-                /*perform_hashing_sha3(sha3_384_ctx, sha3_384_init, sha3_384_update, sha3_384_digest,
-                                                        SHA3_384_DIGEST_SIZE, tmpsig_computed, &tmpsig_computed[0],
-                                                            digest_hash_2_compute_sigma);*/
                                 
 
                 //compute_sigma
                 dump_sigma=mpz_export(NULL, &byte2write_compute_sigma, 1,1,0,0, cmt_sigma);
-                memcpy(share_buffer, dump_sigma, byte2write_compute_sigma*sizeof(uint8_t));  
+                memcpy(dump_buffer, dump_sigma, byte2write_compute_sigma*sizeof(uint8_t));  
 
                 //H2 sigma computato, output sha3-348
                 uint8_t digest_hash_2_compute_sigma[SHA3_512_DIGEST_SIZE]={0};
-                perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, dump_sigma,
-                                                    byte2write_compute_sigma, digest_hash_2_compute_sigma, SHA3_384_DIGEST_SIZE);
-    
-                /*printf("check share_buffer ");
-                for(size_t i=0;i<(byte2writes+byte2write)+(size_t)nbyte/2;i++)
-                    printf("%02x", share_buffer[i]);
-                printf("\n\n");*/
-                                              
+                /*perform_hashing_sha3_512(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,
+                                                                    dump_sigma, byte2write_compute_sigma, digest_hash_2_compute_sigma,
+                                                                                SHA3_384_DIGEST_SIZE);*/
+                perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,
+                                                                    dump_sigma, byte2write_compute_sigma, digest_hash_2_compute_sigma);
                 
                 //get m
                 mpz_import(tmp, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_hash_2_compute_sigma);
                 mpz_fdiv_q_2exp(tmp, tmp, n_sec_parameter_H2_hash_functions);//get sha3-348
                 mpz_xor(computed_m, K->info_cipher.K_2.C, tmp);
 
-                
-                /*perform_hashing_sha3(sha3_512_ctx, sha3_512_init, sha3_512_update,
-                            sha3_512_digest, SHA3_512_DIGEST_SIZE, H_delegator, &H_delegator[0], digest_check_sig_m);*/
-
-                extern uint8_t *dump_msg;
-                
                 dump_msg=mpz_export(NULL, &byte2write_msg, 1,1,0,0, computed_m);
-                memcpy(share_buffer, dump_sigma, byte2write_compute_sigma*sizeof(uint8_t));    
-                
-                memcpy(share_buffer+byte2write_compute_sigma, dump_msg, byte2write_msg*sizeof(uint8_t));
+                memcpy(dump_buffer, dump_sigma, byte2write_compute_sigma*sizeof(uint8_t));    
+                //?
+                memcpy(dump_buffer+byte2write_compute_sigma, dump_msg, byte2write_msg*sizeof(uint8_t));
                 nbyte= snprintf(NULL, 0, "%02x", pk->delegator->id_hash);
                 
                 //endian host
-                memcpy(share_buffer+byte2write_compute_sigma+byte2write_msg, &(pk->delegator->id_hash),
+                memcpy(dump_buffer+byte2write_compute_sigma+byte2write_msg, &(pk->delegator->id_hash),
                                 (size_t)nbyte);
                 
                     
                 //H generic hash from delegator (alice), Zn^n bits outout
-                uint8_t digest_check_h_sig_m_Zn2[SIZE_BUFFER]={0};
-                perform_hashing_sha3_generic(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
-                                                        (byte2write_compute_sigma+byte2write_msg)+(size_t)nbyte/2,
-                                                        digest_check_h_sig_m_Zn2, SIZE_BUFFER);
-                    
-                
-                /*perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
-                                                       (byte2write_compute_sigma+byte2write_msg)+(size_t)nbyte/2, digest_check_h_sig_m);*/
-
+                uint8_t digest_check_h_sig_m_Zn2[size_NN];
+                perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, size_NN,
+                                             dump_buffer, (byte2write_compute_sigma+byte2write_msg)+(size_t)nbyte/2,
+                                                        digest_check_h_sig_m_Zn2);
                 
                 mpz_import(check_H, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_check_h_sig_m_Zn2);
                 mpz_mod(check_H, check_H, pk->NN);
@@ -960,8 +922,9 @@ void decryption (const ciphertext_t *K, const public_key_t *pk,
 /*
  * ReKeyGen
  */
-void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key, const state_t *PRE_state,
-                            const public_key_t *pkY, const private_key_t *skX, weak_secret_key_t *wskX){
+void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key, const state_t *PRE_state, 
+                                        const public_key_t *pkY, const private_key_t *skX, weak_secret_key_t *wskX,
+                                                            struct sha3_512_ctx context_512, unsigned int size_NN){
   
     assert(prng);
 
@@ -972,14 +935,14 @@ void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key, const state
     mpz_inits (sigma_dot, beta_dot, h_1, tmp, rXY, NULL);
 
     size_t byte2write_sigma_dot=0, byte2write_beta_dot=0;
+    uint8_t dump_buffer[size_NN];
+    uint8_t *dump_sigma, *dump_msg;
     
     //sigma_dot random in Zn
     mpz_urandomm(sigma_dot, prng, pkY->N);
     
     //beta_dot random in {0,1}^k1
     mpz_urandomb(beta_dot, prng, k1_sec_parameter_H1_hash_functions);
-    
-    extern uint8_t share_buffer[];
     
     mpz_sub(RE_enc_key->k2_x2y, wskX->a, beta_dot);
     mpz_mul(tmp, skX->p, skX->q);
@@ -989,49 +952,36 @@ void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key, const state
     //rk_X->Y
     mpz_mod(RE_enc_key->k2_x2y, RE_enc_key->k2_x2y, tmp);
     
-    //printf("\n rX->Y=HY= (hash sigma_dot || beta_dot || id)\n");
-    /*perform_hashing_sha3(sha3_384_ctx, sha3_384_init, sha3_384_update,
-                            sha3_384_digest, SHA3_384_DIGEST_SIZE, tmpHY, &tmpHY[0], digest_h_Y_rXY);*/
-    
-    
     dump_msg=mpz_export(NULL, &byte2write_beta_dot, 1,1, 0, 0, beta_dot);//beta_dot
     dump_sigma=mpz_export(NULL, &byte2write_sigma_dot, 1,1, 0, 0, sigma_dot);//sigma_dot
     
-    memcpy(share_buffer, dump_sigma, byte2write_sigma_dot*sizeof(uint8_t));    
-    memcpy(share_buffer+byte2write_sigma_dot, dump_msg, byte2write_beta_dot*sizeof(uint8_t));
+    memcpy(dump_buffer, dump_sigma, byte2write_sigma_dot*sizeof(uint8_t));    
+    memcpy(dump_buffer+byte2write_sigma_dot, dump_msg, byte2write_beta_dot*sizeof(uint8_t));
     const int nbyte= snprintf(NULL, 0, "%02x", pkY->id_hash);
 
     //endian host
-    memcpy(share_buffer+byte2write_sigma_dot+byte2write_beta_dot, &(pkY->id_hash), (size_t)nbyte);
-    
-    /*uint8_t digest_h_Y_rXY[SHA3_512_DIGEST_SIZE];
-    perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
-                                                       (byte2write_sigma_dot+byte2write_beta_dot)+(size_t)nbyte/2,  digest_h_Y_rXY);*/
-    
-    
+    memcpy(dump_buffer+byte2write_sigma_dot+byte2write_beta_dot, &(pkY->id_hash), (size_t)nbyte);
+        
     //H generic hash Y, Zn^2 bits outout
     //rX->Y= HY ( sigma_dot || beta_dot || idY )
-    uint8_t digest_h_Y_rXY_Zn2[SIZE_BUFFER]={0};
-    perform_hashing_sha3_generic(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, share_buffer,
-                                                       (byte2write_sigma_dot+byte2write_beta_dot)+(size_t)nbyte/2,  
-                                                    digest_h_Y_rXY_Zn2, SIZE_BUFFER);
+    uint8_t digest_h_Y_rXY_Zn2[size_NN];
+    perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, size_NN,
+                                                        dump_buffer, (byte2write_sigma_dot+byte2write_beta_dot)+(size_t)nbyte/2,  
+                                                            digest_h_Y_rXY_Zn2);
     
     mpz_import(rXY, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_h_Y_rXY_Zn2);
     mpz_mod(rXY, rXY, pkY->NN);
     
     //A_dot
-    mpz_powm(RE_enc_key->A_dot, pkY->g0, rXY, pkY->NN);
-    
-    /*uint8_t digest_h_1_c_sigid[SHA3_512_DIGEST_SIZE];
-    //printf("\n H1= ( sigma dot || id )\n");
-    perform_hashing_sha3(sha3_512_ctx, sha3_512_init, sha3_512_update,
-                            sha3_512_digest, SHA3_512_DIGEST_SIZE, tmpH1, &tmpH1[0], digest_h_1_c_sigid);*/
-    
+    mpz_powm(RE_enc_key->A_dot, pkY->g0, rXY, pkY->NN);    
     
     //H1 sigma_dot RekeyGen, output sha3-512
     uint8_t digest_H_1_sigma[SHA3_512_DIGEST_SIZE];
-    perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, dump_sigma,
-                                                       byte2write_sigma_dot, digest_H_1_sigma, SHA3_512_DIGEST_SIZE);
+    /*perform_hashing_sha3_512(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, dump_sigma,
+                                                       byte2write_sigma_dot, digest_H_1_sigma, SHA3_512_DIGEST_SIZE);*/
+    
+    perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE,dump_sigma,
+                                                        byte2write_sigma_dot, digest_H_1_sigma);
     
     mpz_import(h_1, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_H_1_sigma);
     
@@ -1066,12 +1016,12 @@ void RekeyGen(gmp_randstate_t prng, re_encryption_key_t *RE_enc_key, const state
  * ReEncrypt
  */
 void ReEncrypt (ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const state_t *PRE_state,
-                            const public_key_t *pkX){    
+                            const public_key_t *pkX, struct sha3_512_ctx context_512){    
     
     if( K==NULL || PRE_state==NULL || pkX==NULL || RE_enc_key==NULL )
         _EXIT("ciphertext K di input corrotto");
     
-    mpz_t g0X_s_A_c, g2X_s_D_c, tmp, check_c, tmpA, tmpB, tmpC, vec[MAXSIZE]={0};
+    mpz_t g0X_s_A_c, g2X_s_D_c, tmp, check_c, tmpA, tmpB, tmpC, vec[BUF_SIZE]={0};
     mpz_inits (g0X_s_A_c, g2X_s_D_c, tmp, check_c, tmpA, tmpB, tmpC, vec[0], vec[1], vec[2],
                         vec[3], vec[4], vec[5], NULL);
     
@@ -1079,7 +1029,7 @@ void ReEncrypt (ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const st
     uint8_t *tx=malloc(sizeof(mpz_t)*100);
     uint8_t *dump_C, *dump_B;
     uint8_t *BC=malloc(sizeof(mpz_t)*64);//1024 byte
-    uint8_t c[MAXSIZE];
+    uint8_t c[BUF_SIZE];
      
     //g0X^s * A^c mod N^2
     mpz_powm(g0X_s_A_c, pkX->g0, K->info_cipher.K_1.s, pkX->NN);
@@ -1123,9 +1073,12 @@ void ReEncrypt (ciphertext_t *K, const re_encryption_key_t *RE_enc_key, const st
     
     //c=H3( A, D, g0X, g2X, (g0X)^s *(A)^c, (g2X)^s *(D)^c), output sha3-256
     uint8_t digest_chec_c[SHA3_512_DIGEST_SIZE]={0};
-    perform_hashing_sha3_512(sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
-                                                    offset+byte2write+len, digest_chec_c, SHA3_256_DIGEST_SIZE);
+    /*perform_hashing_sha3_512(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
+                                                    offset+byte2write+len, digest_chec_c, SHA3_256_DIGEST_SIZE);*/
     
+    perform_hashing_sha3_generic(context_512, sha3_512_update, sha3_512_digest, SHA3_512_DIGEST_SIZE, c,
+                                                    offset+byte2write+len, digest_chec_c);
+        
     mpz_import(check_c, SHA3_512_DIGEST_SIZE,1,1,0,0, digest_chec_c);
     mpz_fdiv_q_2exp(check_c, check_c, k2_sec_parameter_H3_hash_functions);//get sha3-256 bits (shift right)
     
