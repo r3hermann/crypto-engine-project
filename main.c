@@ -22,21 +22,12 @@
 #include <string.h>
 #include<errno.h>
 
-#define DEFAULT_p_BITS 1024
-#define DEFAULT_q_BITS 1024
-
-
+#define DEFAULT_p_BITS 512
+#define DEFAULT_q_BITS 512
 
 #define prng_sec_level 96
 #define bench_sampling_time 5 /* secondi */
 #define max_samples (bench_sampling_time * 1000)
-
-
-
-/** global variable **/
-
-
-//extern uint8_t share_buffer[SIZE_BUFFER];
 
 
 int main (int argc, char* argv[]){
@@ -55,7 +46,7 @@ int main (int argc, char* argv[]){
     
     unsigned int p_bits=DEFAULT_p_BITS;
     unsigned int q_bits=DEFAULT_q_BITS;
-    unsigned int size_NN=((p_bits+q_bits)*2)/CHAR_BIT; //byte
+    unsigned int size_NN=((p_bits+q_bits)*2)/CHAR_BIT; //byte, CHAR_BIT=8 bit
 
     plaintext_t plaintext_msg;
 
@@ -77,7 +68,6 @@ int main (int argc, char* argv[]){
     state_t PRE_state;
     
     long prng_seed=random_seed();
-    
 
     //hash functions
     struct sha3_512_ctx context_512;
