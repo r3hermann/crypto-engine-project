@@ -199,11 +199,10 @@ int main (int argc, char* argv[]){
     weak_secret_key_init(&wsk);
     
     printf("\n\nGenerazione parametri di Bob\n");
-    perform_oneshot_clock_cycles_sampling(time, tu_millis,{
-        generate_keys(&params, p_bits, q_bits, &pk, &sk, &wsk, prng, PRE_state.h_2);
-    });
+    perform_clock_cycles_sampling_period(timing, applied_sampling_time, max_samples, tu_millis,{
+        generate_keys(&params, p_bits, q_bits, &pk, &sk, &wsk, prng, PRE_state.h_2);},{});
     if (do_bench)
-        printf_et("Generazione parametri di Bob...: ", time, tu_sec,"\n");
+        printf_short_stats("Generazione parametri di Bob...: ", timing, "");
     
     printf("\navvio richiesta di re_encryption...\n");
     printf("avvio procedura ReKeygen dal Proxy in corso...\n");
