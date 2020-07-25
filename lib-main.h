@@ -59,8 +59,6 @@
 
 
 
-
-
 /******** function prototype ********/
 
 
@@ -68,7 +66,7 @@
 /*
  * ciphertext type. k_1= (A, B, D, c, s), k_2=K=(A, A', B, C, A_dot, B_dot, C_dot)
  */
-typedef enum { ciphertext_type_k_1, ciphertext_type_k_2 } ciphertext_type_t;
+typedef enum { CIPHERTEXT_TYPE_K_1, CIPHERTEXT_TYPE_K_2 } ciphertext_type_t;
 
 /*
  * undirectional ReEncrypt key
@@ -233,7 +231,6 @@ void ReKeyGen_keys_clear(re_encryption_key_t *RE_enc_key);
 void plaintext_clear(plaintext_t *plaintext);
 void ciphertext_clear(ciphertext_t *K);
 void ciphertextK2_clear(ciphertext_t *K);
-//void ciphertextK1_clear(ciphertext_t *K);
 
 
 //keyGen
