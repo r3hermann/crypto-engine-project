@@ -224,7 +224,6 @@ int main (int argc, char* argv[]){
     
     ciphertext_RE_init(&K);
     perform_oneshot_clock_cycles_sampling(time, tu_millis,{
-            //mpz_init(K.info_cipher.K_2.C_dot);
             ReEncrypt(&K, &RE_enc_key, &PRE_state, &pkX, context_512); //re-enc cipher under alices pk
         });
     printf("cifratura ciphertext= (A, A', B, C, A_dot, B_dot, C_dot)\n");
