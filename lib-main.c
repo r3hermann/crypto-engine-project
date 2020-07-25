@@ -33,10 +33,10 @@
             FNC_DIGEST(&CTX, DGST_SIZE, DIGESTSXXX);                                                                                    \
             blocks_to_hash=BLOCKSIZE;                                                                                                                 \
     }                                                                                                                                                                    \
-    snprintf(buffer, sizeof(buffer), "\ndigest (%d bit)", DGST_SIZE*8 );                                                               \
-    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                       \
-    snprintf(buffer, sizeof(buffer), "blocco da %.2f byte\n", (float)(blocks_to_hash));                                          \
+    snprintf(buffer, sizeof(buffer), "\nblock hash data: %.2f byte", (float)(blocks_to_hash));                               \
     pmesg(msg_verbose, buffer, blocks_to_hash);                                                                                               \
+    snprintf(buffer, sizeof(buffer), "digest (%d bit)", DGST_SIZE*8 );                                                               \
+    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                       \
                  free(sha3_tmp);                                                                                                                                  \
 }while(0)
                                                                 
