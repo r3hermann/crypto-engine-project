@@ -41,18 +41,14 @@
 }while(0)
                                                                 
                                                                 
-                                                                
-/* display_hex(SHA3_512_DIGEST_SIZE, digest);              \
-    printf("\n\n\n");*/
-                                                                
+                                                                                    
                 
-static inline void display_hex(long unsigned int length, uint8_t *data) {
+/*static inline void display_hex(long unsigned int length, uint8_t *data) {
     unsigned int i;
   for (i= 0; i<length; i++)
     printf("%02x", data[i]);
   printf("\n");
-    
-}
+}*/
 
 long random_seed () {
 
