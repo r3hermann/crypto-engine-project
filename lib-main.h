@@ -12,13 +12,9 @@
 #include <nettle/sha3.h>
 #include <errno.h> 
 
-#define sampling_time 5 /* secondi */
-#define max_sampleshash (sampling_time * 200)
-
 #define mr_iterations 15
 #define BYTEREAD sizeof(char)*4
 #define BUF_SIZE 2000
-
 
 #define _EXIT(string) do{ fprintf(stderr,"%s %s, line %d.\n", string, __FILE__, __LINE__);exit(EXIT_FAILURE);}while(0)
 
