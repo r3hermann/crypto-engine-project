@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include<errno.h>
+#include <limits.h>
 
 #define DEFAULT_p_BITS 512
 #define DEFAULT_q_BITS 512
