@@ -17,7 +17,7 @@
     size_t n=0, offset_dgst=0, blocks_to_hash=0;                                                                                             \
     uint8_t *sha3_tmp=malloc(sizeof(uint8_t)*BLOCKSIZE+1);                                                                          \
     uint8_t digest[SHA3_512_DIGEST_SIZE]={0};                                                                                              \
-    if (  DGST_SIZE > (SHA3_512_DIGEST_SIZE) ) {                                                                                            \
+    if (  DGST_SIZE > SHA3_512_DIGEST_SIZE ) {                                                                                              \
        for( size_t i=0; i<DGST_SIZE; i+=SHA3_512_DIGEST_SIZE){                                                                     \
            memcpy(sha3_tmp, BUFFER, BLOCKSIZE*sizeof(uint8_t));                                                                     \
            memcpy(sha3_tmp+BLOCKSIZE, &n, sizeof(uint8_t));                                                                           \
@@ -35,9 +35,9 @@
     }                                                                                                                                                                    \
     snprintf(buffer, sizeof(buffer), "\nblock hash data: %.2f byte", (float)(blocks_to_hash));                               \
     pmesg(msg_verbose, buffer, blocks_to_hash);                                                                                               \
-    snprintf(buffer, sizeof(buffer), "digest (%d bit)", DGST_SIZE*8 );                                                               \
-    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                       \
-                 free(sha3_tmp);                                                                                                                                  \
+    snprintf(buffer, sizeof(buffer), "digest (%d bit)", DGST_SIZE*8 );                                                                   \
+    pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                         \
+    free(sha3_tmp);                                                                                                                                                \
 }while(0)
                                                                 
                                                                 
