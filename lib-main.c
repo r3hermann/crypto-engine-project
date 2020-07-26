@@ -3,7 +3,7 @@
 #include <sys/types.h>
 #include<sys/wait.h>
 #include <errno.h> 
-
+#include <limits.h>
 
 #define CHECK(filepointer) if(!filepointer) {fprintf(stderr, "ERROR (" __FILE__ ":%d) %s\n",__LINE__,strerror(errno));    \
                                                                      exit(EXIT_FAILURE);}
@@ -35,7 +35,7 @@
     }                                                                                                                                                                    \
     snprintf(buffer, sizeof(buffer), "\nblock hash data: %.2f byte", (float)(blocks_to_hash));                               \
     pmesg(msg_verbose, buffer, blocks_to_hash);                                                                                               \
-    snprintf(buffer, sizeof(buffer), "digest (%d bit)", DGST_SIZE*8 );                                                                   \
+    snprintf(buffer, sizeof(buffer), "digest (%d bit)", DGST_SIZE*CHAR_BIT );                                                      \
     pmesg_hex(msg_verbose, buffer, DGST_SIZE, DIGESTSXXX);                                                                         \
     free(sha3_tmp);                                                                                                                                                \
 }while(0)
