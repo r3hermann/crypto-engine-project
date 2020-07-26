@@ -46,7 +46,9 @@ int main (int argc, char* argv[]){
     
     unsigned int p_bits=DEFAULT_p_BITS;
     unsigned int q_bits=DEFAULT_q_BITS;
-    unsigned int size_NN=((p_bits+q_bits)*2)/CHAR_BIT; //byte, CHAR_BIT=8 bit
+    
+    //sizeof(N^2) in byte
+    unsigned int size_NN=((p_bits+q_bits)*2)/CHAR_BIT; // CHAR_BIT=8 bit
 
     plaintext_t plaintext_msg;
 
