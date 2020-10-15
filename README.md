@@ -1,9 +1,6 @@
 # CCA-Secure Proxy Re-Encryption without Pairings∗ 
 
-In uno schema proxy re-encryption, un proxy di "terze parti" di "fiducia" può trasformare un ciphertext firmato dalla chiava pubblica, pk, di Alice in un altro
-ciphertext che Bob può decifrare. Si osservi che il proxy non ha accesso al plaintext. Grazie a questa proprietà, lo schema proxy re-encryption può essere
-usato in molte applicazioni come le email cifrate. In questo progetto rappresenta l'applicazione delloschema proxy re-encryption senza pairings, usando la conversione Fijasaki-Okamoto e la "signature of knowledge", inoltre il proxy può solamente trasformare il ciphertext in modalità *one direction*. Questo
-schema si propone come uno schema sicuro in senso CCA e resistente alle collisioni  sul modello *random oracle* supposto che il problema decisionale Diffie-Hellman (DDH) in ![Alt text](math-formula/render.cgi.png) sia difficile e sia computazionalmente difficile anche il problema della fattorizzazione. Quindi questo schema di presenta, fino ad ora, il primo schema PRE unidirezionale sicuro in senso CCA e resistente alle collisioni.
+In a proxy re-encryption scheme, a "trusted" "third party" proxy can transform a ciphertext signed by Alice's public key, pk, into another ciphertext that Bob can decrypt. Note that the proxy does not have access to the plaintext. Thanks to this property, the proxy re-encryption scheme can be used in many applications such as encrypted emails. In this project it represents the application of the proxy re-encryption scheme without pairings, using the Fijasaki-Okamoto conversion and the "signature of knowledge", furthermore the proxy can only transform the ciphertext in * one direction * mode. This scheme is proposed as a CCA-safe and collision-resistant scheme on the * random oracle * model assuming that the Diffie-Hellman (DDH) decision problem in! [Alt text] (math-formula / render.cgi.png) is difficult and the problem of factorization is also computationally difficult. So this scheme presents, up to now, the first one-way PRE scheme that is safe in the CCA sense and resistant to collisions.
 
 ## Getting Started
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
@@ -11,7 +8,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 
 ### Prerequisites
- pachetti da installare per utilizzare il progetto
+packages to install to use the project
 
 * [ The GNU Multiple Precision Arithmetic library ](https://gmplib.org/)
 * [ Nettle: a low-level cryptographic library ](https://www.lysator.liu.se/~nisse/nettle/)
@@ -20,7 +17,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Installing
 
-clona il repository, per usare il progetto usare il Makefile
+clone the repository, to use the project use the Makefile
 
 ```
 
@@ -40,4 +37,4 @@ make
 
 ## License
 
-Questo progetto usa la MIT License - vedi [LICENSE.md](LICENSE.md) file for details
+This project uses the MIT License - see [LICENSE.md](LICENSE.md) file for details
